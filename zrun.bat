@@ -1,1 +1,1 @@
-cmake --build build --config Release
+start ./build/Release/Rasterize.exe

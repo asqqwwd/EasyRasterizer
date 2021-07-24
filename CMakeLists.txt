@@ -36,7 +36,7 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 
 # 在src目录下寻找所有源文件，加入SRC变量
 # aux_source_directory("./src" SRC)  
-file(GLOB_RECURSE SRC ./src/ *.cpp *.h)  # 递归遍历文件夹
+file(GLOB_RECURSE SRC src/*.cpp src/*.h)  # 递归遍历文件夹
 
 # 添加源码到可执行项目。有main入口的可执行文件
 add_executable(Rasterize ${SRC})
@@ -46,7 +46,7 @@ add_executable(Rasterize ${SRC})
 # 目标文件与库文件进行链接。静态库直接代码拷贝，动态库只做地址映射，dll文件不会自动复制过去，所以需要手动将opencv的dll添加到环境变量中
 target_link_libraries(Rasterize ${OpenCV_LIBS})  
 
-message(STATUS "***** "  ${PROJECT_NAME}  " ***** "  ${SRC}  " *****")
+message("***** "  ${PROJECT_NAME}  " ***** "  ${SRC}  " *****")
 
 # cmake -G "Visual Studio 16 2019" -A x64 -S ./ -B "build"
 # cmake --build build --config Release
