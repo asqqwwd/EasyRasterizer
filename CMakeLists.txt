@@ -1,5 +1,5 @@
 # 指定最小支持版本，如果太小，会出现找不到具体cmake指令的错误
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.10)
 
 project(MainSolution)
 

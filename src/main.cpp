@@ -7,13 +7,24 @@
 #include <initializer_list>
 #include <memory>
 
-#include "core/data_structure.h"
+#include "core/data_structure.hpp"
+#include "core/system.h"
+#include "core/scene.h"
 #include "core/entity.h"
+#include "core/component.h"
+
+using namespace std;
+// using namespace Core;
 
 int main(int argc, char **argv)
 {
-   Vector3f a(1.1f,2.1f,3.1f);
-   Vector3f b(1.1f,2.1f,3.1f);
-    a = a + b;
-    std::cout << a[0] << " " << a[1] << " " << a[2] << std::endl;
+    new Core::RasterizeSystem();
+    Core::cd_to_scene(new Core::Scene("Default"));
+
+    Core::add_entity(new Core::Entity("Obj1"));
+    Core::get_entity("Obj1")->add_component(new Core::MeshComponent());
+    for (auto sys : Core::all_systems)
+    {
+        sys->update();
+    }
 }
