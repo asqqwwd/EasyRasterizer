@@ -92,26 +92,50 @@ namespace Core
     }
     void add_entity(Entity *entity)
     {
+        if (!current_scene)
+        {
+            std::cerr << "Current scene is empty" << std::endl;
+            exit(-1);
+        }
         current_scene->add_entity(entity);
     }
     void delete_entity(const std::string &eid)
     {
+        if (!current_scene)
+        {
+            std::cerr << "Current scene is empty" << std::endl;
+            exit(-1);
+        }
         current_scene->delete_entity(eid);
     }
     Entity *get_entity(const std::string &eid)
     {
+        if (!current_scene)
+        {
+            std::cerr << "Current scene is empty" << std::endl;
+            exit(-1);
+        }
         return current_scene->get_entity(eid);
     }
     std::vector<Entity *> get_all_entities()
     {
+        if (!current_scene)
+        {
+            std::cerr << "Current scene is empty" << std::endl;
+            exit(-1);
+        }
         return current_scene->get_all_entities();
     }
     template <typename T>
     std::vector<T *> get_all_components()
     {
+        if (!current_scene)
+        {
+            std::cerr << "Current scene is empty" << std::endl;
+            exit(-1);
+        }
         return current_scene->get_all_components<T>();
     }
-
 }
 
 #endif // ERER_CORE_SCENE_H_

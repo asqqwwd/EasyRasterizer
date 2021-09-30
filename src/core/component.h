@@ -7,6 +7,7 @@
 #include <typeinfo>
 
 #include "data_structure.hpp"
+#include "../utils/loader.h"
 
 namespace Core
 {
@@ -38,17 +39,58 @@ namespace Core
     class MeshComponent : public Component
     {
     private:
-        std::vector<Matrix3i> faces_;
         std::vector<Vector3f> vertices_;
+        std::vector<Vector3f> uvs_;
+        std::vector<Vector3f> normals_;
+        std::vector<Matrix3i> faces_;
 
     public:
-        MeshComponent() : Component()
+        MeshComponent(const std::string &obj_filename) : Component()
         {
             if (eid_.empty())
             {
                 eid_ = typeid(*this).name();
                 // eid_ = std::hash<std::string>{}(typeid(*this).name());
             }
+
+            Utils::load_obj_file(obj_filename, &vertices_, &uvs_, &normals_, &faces_);
+        }
+
+        std::vector<Tensor<Matrix3f, 3>> get_all_faces()
+        {
+            std::vector<Tensor<Matrix3f, 3>> ret;
+            Tensor<Matrix3f, 3> tmp;
+            for (auto f : faces_)
+            {
+                for (int i = 0; i < 3; ++i)
+                {
+                    tmp[0][i] = vertices_[f[0][i]];
+                    tmp[1][i] = uvs_[f[1][i]];
+                    tmp[2][i] = normals_[f[2][i]];
+                }
+                ret.push_back(tmp);
+            }
+            return ret;
+        }
+    };
+
+    class CameraComponent : public Component
+    {
+    private:
+        float near_;
+        float far_;
+    public:
+        CameraComponent() : Component()
+        {
+            if (eid_.empty())
+            {
+                eid_ = typeid(*this).name();
+                // eid_ = std::hash<std::string>{}(typeid(*this).name());
+            }
+        }
+
+        void lookat(const Vector3f &pos, const Vector3f &up)
+        {
         }
     };
 }

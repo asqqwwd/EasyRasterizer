@@ -11,7 +11,6 @@
 
 namespace Core
 {
-    class Component;
     class Entity
     {
     private:

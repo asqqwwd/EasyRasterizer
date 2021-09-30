@@ -1,1 +1,0 @@
-start ./build/Release/Rasterize.exe

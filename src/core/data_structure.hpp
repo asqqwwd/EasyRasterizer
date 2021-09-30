@@ -369,15 +369,9 @@ namespace Core
     using Vector3i = Tensor<int, 3>;
     using Vector4i = Tensor<int, 4>;
 
+    using Matrix3i = Tensor<Tensor<int, 3>, 3>;
     using Matrix3f = Tensor<Tensor<float, 3>, 3>;
     using Matrix4f = Tensor<Tensor<float, 4>, 4>;
-
-    class ObjPoint
-    {
-        Vector3f pos_;
-        Vector3f normal_;
-        Vector3f uv_;
-    };
 }
 
 #endif // ERER_CORE_DATA_STRUCTURE_H_
