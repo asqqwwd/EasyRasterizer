@@ -6,12 +6,11 @@
 #include <stdlib.h>
 
 #include "scene.h"
+#include "shader.h"
 #include "../settings.h"
 
 namespace Core
 {
-    unsigned char *render_image = new unsigned char[Settings::WIDTH * Settings::HEIGHT * 3];
-
     class System;
     std::vector<System *> all_systems;
 
@@ -72,12 +71,23 @@ namespace Core
 
         void update()
         {
-            for (MeshComponent *component : get_all_components<MeshComponent>())
+            Attribute attribute;
+            Uniform uniform;
+            a2v v;
+            v2f i;
+            attribute.M.mul(attribute.V);
+            for (CameraComponent *cc : get_all_components<CameraComponent>())
             {
-                for (auto face : component->get_all_faces())
-                {
-                    // Triangle()
-                }
+                // Matrix4f ViewPort = cc->getViewPort(Vector2i{Settings::WIDTH, Settings::HEIGHT});
+                // Matrix4f VP = cc->getVP();
+                // for (MeshComponent *mc : get_all_components<MeshComponent>())
+                // {
+                //     Matrix4f M = mc->getM();
+                //     for (auto face : mc->get_all_faces())
+                //     {
+                //         // Triangle()
+                //     }
+                // }
             }
         }
     };

@@ -1,6 +1,8 @@
 #ifndef ERER_SETTINGS_H_
 #define ERER_SETTINGS_H_
 
+#define PI 3.1415926535
+
 namespace Settings
 {
     const int WIDTH = 700;  // 水平方向长度

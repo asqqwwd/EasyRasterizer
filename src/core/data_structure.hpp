@@ -6,6 +6,7 @@
 #include <typeinfo>         // typeid
 #include <initializer_list> //std::initializer_list
 #include <type_traits>      // std::enable_if_v std::is_class_t
+#include <cmath>
 
 namespace Core
 {
@@ -21,22 +22,22 @@ namespace Core
         Tensor() : data_(new T[M]()) // dynamic array padding with zeros
         {
         }
-        Tensor(const std::initializer_list<double> &il) : data_(new T[M]())
+        Tensor(const std::initializer_list<float> &il) : data_(new T[M]())
         {
             for (int i = M; i--;)
             {
-                data_[i] = *(il.begin() + i);
+                data_[i] = static_cast<T>(*(il.begin() + i));
             }
         }
-        Tensor &operator=(const std::initializer_list<double> &il)
+        Tensor &operator=(const std::initializer_list<float> &il)
         {
             for (int i = M; i--;)
             {
-                data_[i] = *(il.begin() + i);
+                data_[i] = static_cast<T>(*(il.begin() + i));
             }
             return *this;
         }
-        Tensor(const std::initializer_list<std::initializer_list<double>> &il) : data_(new T[M]())
+        Tensor(const std::initializer_list<std::initializer_list<float>> &il) : data_(new T[M]())
         {
             for (int i = M; i--;) // prohibition of using i--
             {
@@ -91,7 +92,7 @@ namespace Core
 
         /* Convert semantics */
         // convert constructor (i.e., what types are allowed to be converted to this class)
-        Tensor(double value)
+        Tensor(float value)
         {
             data_ = new T[M]();
             for (int i = M; i--; data_[i] = std::is_class<T>::value ? value : static_cast<T>(value))
@@ -125,7 +126,7 @@ namespace Core
                 ;
             return *this; // move()
         }                 // return type cannot be the reference of the local variable  because the local variable will be destroyed after calling, but return of the copy of the local variable will not be destroyed
-        inline Tensor &operator+=(double value)
+        inline Tensor &operator+=(float value)
         {
             for (int i = M; i--; data_[i] += value)
                 ;
@@ -135,7 +136,7 @@ namespace Core
         {
             return Tensor(*this) += vec;
         }
-        inline Tensor operator+(double value)
+        inline Tensor operator+(float value)
         {
             return Tensor(*this) += value;
         }
@@ -145,7 +146,7 @@ namespace Core
                 ;
             return *this;
         }
-        inline Tensor &operator-=(double value)
+        inline Tensor &operator-=(float value)
         {
             for (int i = M; i--; data_[i] -= value)
                 ;
@@ -155,7 +156,7 @@ namespace Core
         {
             return Tensor(*this) -= vec;
         }
-        inline Tensor operator-(double value)
+        inline Tensor operator-(float value)
         {
             return Tensor(*this) -= value;
         }
@@ -165,7 +166,7 @@ namespace Core
                 ;
             return *this;
         }
-        inline Tensor &operator*=(double value)
+        inline Tensor &operator*=(float value)
         {
             for (int i = M; i--; data_[i] *= value)
                 ;
@@ -175,7 +176,7 @@ namespace Core
         {
             return Tensor(*this) *= vec;
         }
-        inline Tensor operator*(double value)
+        inline Tensor operator*(float value)
         {
             return Tensor(*this) *= value;
         }
@@ -193,11 +194,11 @@ namespace Core
             }
             return *this;
         }
-        inline Tensor &operator/=(double value)
+        inline Tensor &operator/=(float value)
         {
             try
             {
-                for (int i = M; i--; data_[i] /= value)
+                for (int i = M; i--; data_[i] = static_cast<T>(data_[i] / value))
                     ;
             }
             catch (const std::exception &e)
@@ -210,25 +211,25 @@ namespace Core
         {
             return Tensor(*this) /= vec;
         }
-        inline Tensor operator/(double value)
+        inline Tensor operator/(float value)
         {
             return Tensor(*this) /= value;
         }
 
         /* Overloading opearator as a friend function, you can overload a special calculation order */
         template <typename, int> // friend function type parameters can't be same with class type parameters
-        friend Tensor operator+(double, const Tensor &);
+        friend Tensor operator+(float, const Tensor &);
         template <typename, int>
-        friend Tensor operator-(double, const Tensor &);
+        friend Tensor operator-(float, const Tensor &);
         template <typename, int>
-        friend Tensor operator*(double, const Tensor &);
+        friend Tensor operator*(float, const Tensor &);
         template <typename, int>
-        friend Tensor operator/(double, const Tensor &);
+        friend Tensor operator/(float, const Tensor &);
         template <typename, int>
         friend std::ostream &operator<<(std::ostream &, const Tensor &);
 
         template <int _NEWROW, typename U = T, typename = typename std::enable_if_t<std::is_arithmetic_v<U>>>
-        Tensor<U, _NEWROW> reshape(double fill = 0)
+        Tensor<U, _NEWROW> reshape(float fill = 0) const
         {
             Tensor<U, _NEWROW> ret;
             for (int i = _NEWROW; i--; ret[i] = (i < M ? data_[i] : fill))
@@ -237,7 +238,7 @@ namespace Core
         }
 
         template <int _NEWROW, int _NEWCOL, typename U = T, typename = typename std::enable_if_t<std::is_class_v<U>>>
-        Tensor<Tensor<typename U::type, _NEWCOL>, _NEWROW> reshape(double fill = 0)
+        Tensor<Tensor<typename U::type, _NEWCOL>, _NEWROW> reshape(float fill = 0) const
         {
             Tensor<Tensor<typename U::type, _NEWCOL>, _NEWROW> ret(fill);
             for (int i = std::min(M, _NEWROW); i--;)
@@ -264,8 +265,14 @@ namespace Core
             return ret;
         }
 
+        template <typename U = T, typename = typename std::enable_if_t<std::is_arithmetic_v<U>>>
+        Tensor<U, M> transpose() const
+        {
+            return *this;
+        }
+
         template <typename U, int N>
-        Tensor<U, M> mul(const Tensor<U, N> &vec)
+        Tensor<U, M> mul(const Tensor<U, N> &vec) const
         {
             static_assert(T::size() == N, "Input dim must be [M N]*[N L]");
 
@@ -279,7 +286,7 @@ namespace Core
         }
 
         template <int L>
-        Tensor<T, L> mul(const Tensor<Tensor<T, M>, L> &vecs)
+        Tensor<T, L> mul(const Tensor<Tensor<T, M>, L> &vecs) const
         {
             Tensor<T, L> ret;
             for (int i = L; i--;)
@@ -289,14 +296,26 @@ namespace Core
             return ret;
         } // for multiple multiplication
 
-        T mul(const Tensor<T, M> &vec)
+        template <typename U = T, typename = typename std::enable_if_t<std::is_arithmetic_v<U>>>
+        U mul(const Tensor &vec) const // Tensor<U,M> mislead compiler to infer U by param, then default template param will be discard that cause every tensor class to have this function
         {
-            T ret = 0;
+            U ret = 0;
             for (int i = M; i--;)
             {
                 ret += data_[i] * vec[i];
             }
             return ret;
+        }
+
+        template <typename U = T, typename = typename std::enable_if_t<std::is_arithmetic_v<U>>>
+        Tensor normal() const
+        {
+            U square_sum = 0;
+            for (int i = M; i--;)
+            {
+                square_sum += data_[i] * data_[i];
+            }
+            return Tensor(*this) / std::sqrt(square_sum);
         }
 
         static constexpr int size()
@@ -307,27 +326,27 @@ namespace Core
     };
 
     template <typename T, int M>
-    Tensor<T, M> operator+(double value, const Tensor<T, M> &vec)
+    Tensor<T, M> operator+(float value, const Tensor<T, M> &vec)
     {
         return Tensor<T, M>(vec) += value;
     }
     template <typename T, int M>
-    Tensor<T, M> operator-(double value, const Tensor<T, M> &vec)
+    Tensor<T, M> operator-(float value, const Tensor<T, M> &vec)
     {
         return Tensor<T, M>(vec) -= value;
     }
     template <typename T, int M>
-    Tensor<T, M> operator*(double value, const Tensor<T, M> &vec)
+    Tensor<T, M> operator*(float value, const Tensor<T, M> &vec)
     {
         return Tensor<T, M>(vec) *= value;
     }
     template <typename T, int M>
-    Tensor<T, M> operator/(double value, const Tensor<T, M> &vec)
+    Tensor<T, M> operator/(float value, const Tensor<T, M> &vec)
     {
         Tensor<T, M> ret = vec;
         try
         {
-            for (int i = M; i--; ret[i] = value / vec[i])
+            for (int i = M; i--; ret[i] = static_cast<T>(value / vec[i]))
                 ;
         }
         catch (const std::exception &e)
@@ -364,8 +383,10 @@ namespace Core
     }
 
     /* Alias template declaration */
+    using Vector2f = Tensor<float, 2>;
     using Vector3f = Tensor<float, 3>;
     using Vector4f = Tensor<float, 4>;
+    using Vector2i = Tensor<int, 2>;
     using Vector3i = Tensor<int, 3>;
     using Vector4i = Tensor<int, 4>;
 

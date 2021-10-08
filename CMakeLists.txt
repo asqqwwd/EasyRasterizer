@@ -5,6 +5,11 @@ project(MainSolution)
 
 set(CMAKE_CXX_STANDARD 17)
 
+IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+    include_directories("${CMAKE_SOURCE_DIR}/3rdparty/include")
+    link_directories("${CMAKE_SOURCE_DIR}/3rdparty/lib")  # g++ -L
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+
 ### 设置 ###
 # set(CMAKE_CONFIGURATION_TYPES "Release" CACHE STRING "" FORCE)  # 编译设置为release
 # set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)  # 设置输出可执行文件路径
@@ -29,8 +34,6 @@ if (Is_Include_OpenCV)
     # link_directories(${OpenCV_LIBRARY_DIRS}) 
 endif() 
 
-include_directories(/usr/include/cairo/)
-
 # 在src目录下寻找所有源文件，加入SRC变量
 # aux_source_directory("./src" SRC)  
 file(GLOB_RECURSE SRC src/*.cpp src/*.h src/*.hpp)  # 递归遍历文件夹
@@ -40,9 +43,16 @@ add_executable(ERer ${SRC})
 #  添加源码到静态/动态库项目。无main入口，可被其他项目调用
 # add_library(ERer ${SRC})  
 
-# target_link_libraries(ERer -lX11) # /usr/lib/x86_64-linux-gnu/libX11.so /usr/lib/x86_64-linux-gnu/libX11.a
-# target_link_libraries(ERer -lcairo)
-target_link_libraries(ERer -lglut -lGLU -lGL)
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+    # target_link_libraries(ERer -lX11) # /usr/lib/x86_64-linux-gnu/libX11.so /usr/lib/x86_64-linux-gnu/libX11.a
+    # target_link_libraries(ERer -lcairo)
+    target_link_libraries(ERer -lglut -lGLU -lGL)
+ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+    target_link_libraries(ERer freeglut.lib)  # g++ -l
+    # windows上的动态库加载路径不能使用-Wl,-rpath指定。
+    # 解决方法：1.直接将dll放在与exe同一目录下即可 2.dll路径加入PATH
+    file(COPY ${CMAKE_SOURCE_DIR}/3rdparty/lib/freeglut.dll DESTINATION ${CMAKE_BINARY_DIR}/Release/)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 if (Is_Include_OpenCV)
     # 目标文件与库文件进行链接。静态库直接代码拷贝，动态库只做地址映射，dll文件不会自动复制过去，所以需要手动将opencv的dll添加到环境变量中

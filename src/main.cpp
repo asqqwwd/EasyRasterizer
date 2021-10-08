@@ -28,7 +28,7 @@ void display(void)
     }
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glDrawPixels(Settings::WIDTH, Settings::HEIGHT, GL_BGR_EXT, GL_UNSIGNED_BYTE, Core::render_image);
+    glDrawPixels(Settings::WIDTH, Settings::HEIGHT, GL_BGR_EXT, GL_UNSIGNED_BYTE, Core::get_entity("MainCamera")->get_component<Core::CameraComponent>()->get_render_image());
     glutSwapBuffers(); // swap double buffer
 }
 
@@ -39,7 +39,6 @@ void window_init(int argc, char **argv)
     glutInitWindowSize(Settings::WIDTH, Settings::HEIGHT);
     glutInitWindowPosition(0, 0);
     glutCreateWindow("ERer");
-    glutDisplayFunc(display);
 }
 
 void game_init()
@@ -47,14 +46,20 @@ void game_init()
     new Core::RasterizeSystem();
     Core::cd_to_scene(new Core::Scene("Default"));
 
-    Core::add_entity(new Core::Entity("Obj1"));
-    Core::get_entity("Obj1")->add_component(new Core::MeshComponent("../obj/african_head.obj"));
+    Core::add_entity(new Core::Entity("HeadObj"));
+    Core::get_entity("HeadObj")->add_component(new Core::MeshComponent("D:/Pro/CppPro/EasyRasterizer/obj/african_head.obj")); // Windows
+
+    Core::add_entity(new Core::Entity("MainCamera"));
+    Core::get_entity("MainCamera")->add_component(new Core::CameraComponent(0.1f, 100.f, 120.f, 90.f));
+    Core::get_entity("MainCamera")->get_component<Core::CameraComponent>()->lookat(Core::Vector3f{1, 0, 0}, Core::Vector3f{0, 1, 0});
 }
 
 int main(int argc, char **argv)
 {
     window_init(argc, argv);
     game_init();
+
+    glutDisplayFunc(display);
     glutMainLoop(); // main loop
 
     return 0;
