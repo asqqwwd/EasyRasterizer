@@ -11,6 +11,9 @@
 
 namespace Core
 {
+    class Scene;
+    std::map<std::string, Scene *> all_scenes;
+
     class Scene
     {
     private:
@@ -83,11 +86,17 @@ namespace Core
             }
             return ret;
         }
+
+        std::string id()
+        {
+            return sid_;
+        }
     };
 
     Scene *current_scene = nullptr;
     void cd_to_scene(Scene *scene)
     {
+        std::clog << "Change to scene [" << scene->id() << "]" << std::endl;
         current_scene = scene;
     }
     void add_entity(Entity *entity)
@@ -136,6 +145,32 @@ namespace Core
         }
         return current_scene->get_all_components<T>();
     }
+
+    class SceneFactory
+    {
+    public:
+        static Scene *build_default_scene()
+        {
+            Scene *scene = new Scene("Default");
+
+            // if (all_scenes.find(scene->id()) != all_scenes.end())
+            // {
+            //     std::clog << "[" << scene->id() + "] is existed" << std::endl;
+            //     return;
+            // }
+            // all_scenes[scene->id()] = scene;
+
+            scene->add_entity(new Entity("HeadObj"));
+            scene->get_entity("HeadObj")->add_component(new MeshComponent("../obj/african_head.obj")); // Linux
+
+            scene->add_entity(new Core::Entity("MainCamera"));
+            CameraComponent *p = new CameraComponent();
+            scene->get_entity("MainCamera")->add_component(new CameraComponent(0.1f, 100.f, 120.f, 90.f));
+            // scene->get_entity("MainCamera")->get_component<CameraComponent>()->lookat(Vector3f{1, 0, 0}, Vector3f{0, 1, 0});
+
+            return scene;
+        }
+    };
 }
 
 #endif // ERER_CORE_SCENE_H_

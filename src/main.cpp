@@ -44,14 +44,7 @@ void window_init(int argc, char **argv)
 void game_init()
 {
     new Core::RasterizeSystem();
-    Core::cd_to_scene(new Core::Scene("Default"));
-
-    Core::add_entity(new Core::Entity("HeadObj"));
-    Core::get_entity("HeadObj")->add_component(new Core::MeshComponent("D:/Pro/CppPro/EasyRasterizer/obj/african_head.obj")); // Windows
-
-    Core::add_entity(new Core::Entity("MainCamera"));
-    Core::get_entity("MainCamera")->add_component(new Core::CameraComponent(0.1f, 100.f, 120.f, 90.f));
-    Core::get_entity("MainCamera")->get_component<Core::CameraComponent>()->lookat(Core::Vector3f{1, 0, 0}, Core::Vector3f{0, 1, 0});
+    Core::cd_to_scene(Core::SceneFactory::build_default_scene());
 }
 
 int main(int argc, char **argv)

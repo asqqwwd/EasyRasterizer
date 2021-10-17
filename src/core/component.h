@@ -17,8 +17,6 @@ namespace Core
     class Component
     {
     protected:
-        static std::string eid_;
-
         Matrix4f T_model_;
         Matrix4f S_model_;
         Matrix4f R_model_;
@@ -31,10 +29,6 @@ namespace Core
             R_model_ = indentity<float, 4>();
         }
         virtual ~Component() {} // virtual func is necessary, otherwise dynamic_cast(base->drived) will fail
-        static std::string id()
-        {
-            return eid_;
-        }
         void set_position(Vector3f pos)
         {
             T_model_[0][3] = pos[0];
@@ -74,8 +68,6 @@ namespace Core
         }
     };
 
-    std::string Component::eid_; // static member variable must be redefined in global namespace again
-
     class MeshComponent : public Component
     {
     private:
@@ -88,12 +80,6 @@ namespace Core
     public:
         MeshComponent(const std::string &obj_filename) : Component()
         {
-            if (eid_.empty())
-            {
-                eid_ = typeid(*this).name();
-                // eid_ = std::hash<std::string>{}(typeid(*this).name());
-            }
-
             Utils::load_obj_file(obj_filename, &vertices_, &uvs_, &normals_, &faces_);
             all_faces_ = unpack_index();
         }
@@ -139,12 +125,6 @@ namespace Core
         CameraComponent(float near = 0.1, float far = 100, float vertical_angle_of_view = 120, float horizontal_angle_of_view = 60)
             : Component(), render_image_(new unsigned char[Settings::WIDTH * Settings::HEIGHT * 3]), near_(near), far_(far), vertical_angle_of_view_(vertical_angle_of_view), horizontal_angle_of_view_(horizontal_angle_of_view)
         {
-            if (eid_.empty())
-            {
-                eid_ = typeid(*this).name();
-                // eid_ = std::hash<std::string>{}(typeid(*this).name());
-            }
-
             M_persp_ = Matrix4f{{near_, 0, 0, 0}, {0, near_, 0, 0}, {0, 0, near_ + far_, -near_ * far_}, {0, 0, 1, 0}};
         }
 
@@ -176,10 +156,13 @@ namespace Core
         Matrix4f getViewPort(const Vector2i &screen)
         {
             Matrix4f ret = indentity<float, 4>();
-            float f1 = static_cast<float>(screen[0] / (2 * near_ * std::tan(horizontal_angle_of_view_ / 2 / PI / 2)));
-            float f2 = static_cast<float>(screen[1] / (2 * near_ * std::tan(vertical_angle_of_view_ / 2 / PI / 2)));
-            ret[0][0] = f1;
-            ret[1][1] = f2;
+            std::cout << near_ << std::endl;
+            // std::cout << horizontal_angle_of_view_ << std::endl;
+            // std::cout << std::tan(horizontal_angle_of_view_ / 2 / PI / 2) << std::endl;
+            // float f1 = static_cast<float>(screen[0] / (2 * near_ * std::tan(horizontal_angle_of_view_ / 2 / PI / 2)));
+            // float f2 = static_cast<float>(screen[1] / (2 * near_ * std::tan(vertical_angle_of_view_ / 2 / PI / 2)));
+            // ret[0][0] = f1;
+            // ret[1][1] = f2;
             return ret;
         }
     };

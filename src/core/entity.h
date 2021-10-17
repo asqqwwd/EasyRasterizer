@@ -49,8 +49,9 @@ namespace Core
 
             for (auto p : components_)
             {
-                if (T::id() == p->id())
+                if (typeid(T) == typeid(*p))
                 {
+                    std::cout << p->id() << std::endl;
                     return dynamic_cast<T *>(p);
                 }
             }

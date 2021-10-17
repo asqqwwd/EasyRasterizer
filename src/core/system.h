@@ -75,20 +75,19 @@ namespace Core
             Uniform uniform;
             a2v v;
             v2f i;
-            attribute.M.mul(attribute.V);
-            for (CameraComponent *cc : get_all_components<CameraComponent>())
-            {
-                // Matrix4f ViewPort = cc->getViewPort(Vector2i{Settings::WIDTH, Settings::HEIGHT});
-                // Matrix4f VP = cc->getVP();
-                // for (MeshComponent *mc : get_all_components<MeshComponent>())
-                // {
-                //     Matrix4f M = mc->getM();
-                //     for (auto face : mc->get_all_faces())
-                //     {
-                //         // Triangle()
-                //     }
-                // }
-            }
+            // for (CameraComponent *cc : get_all_components<CameraComponent>())
+            // {
+            //     Matrix4f ViewPort = cc->getViewPort(Vector2i{Settings::WIDTH, Settings::HEIGHT});
+            //     // Matrix4f VP = cc->getVP();
+            //     // for (MeshComponent *mc : get_all_components<MeshComponent>())
+            //     // {
+            //     //     Matrix4f M = mc->getM();
+            //     //     for (auto face : mc->get_all_faces())
+            //     //     {
+            //     //         // Triangle()
+            //     //     }
+            //     // }
+            // }
         }
     };
 
