@@ -81,7 +81,7 @@ namespace Core
         MeshComponent(const std::string &obj_filename) : Component()
         {
             Utils::load_obj_file(obj_filename, &vertices_, &uvs_, &normals_, &faces_);
-            all_faces_ = unpack_index();
+            all_faces_ = unpack_index();  // vertices uvs normals
         }
 
         std::vector<Tensor<Tensor<Tensor<float, 3>, 3>, 3>> unpack_index()
@@ -146,6 +146,10 @@ namespace Core
         Matrix4f getV()
         {
             return R_view_.mul(T_view_);
+        }
+
+        Matrix4f getP(){
+            return M_persp;
         }
 
         Matrix4f getVP()

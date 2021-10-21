@@ -12,24 +12,26 @@ namespace Core
         Matrix4f P;
         Matrix4f ViewPort;
         Vector3f light_dir;
-    };
+    };  // system attributes
     struct Uniform
     {
         // Pixmap
-    };
+    };  // user self-defined
 
     struct a2v
     {
         Vector3f POSITION;
         Vector3f NORMAL;
         Vector2f TEXCOORD0;
-    };
+    };  // application inputs
 
     struct v2f
     {
         Vector3f SV_POSITION;
         Vector4i COLOR0;
-    };
+    };  // vertex shader outpus
+
+    
 
     v2f vert(const a2v &v, const Attribute &attribute, const Uniform &uniform)
     {

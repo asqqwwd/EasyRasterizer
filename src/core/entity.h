@@ -51,7 +51,7 @@ namespace Core
             {
                 if (typeid(T) == typeid(*p))
                 {
-                    std::cout << p->id() << std::endl;
+                    std::cout<<"**"<<std::endl;
                     return dynamic_cast<T *>(p);
                 }
             }
