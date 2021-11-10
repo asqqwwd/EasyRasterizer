@@ -22,26 +22,18 @@ namespace Core
         Tensor() : data_(new T[M]()) // dynamic array padding with zeros
         {
         }
-        Tensor(const std::initializer_list<float> &il) : data_(new T[M]())
-        {
-            for (int i = M; i--;)
-            {
-                data_[i] = static_cast<T>(*(il.begin() + i));
-            }
-        }
-        Tensor &operator=(const std::initializer_list<float> &il)
-        {
-            for (int i = M; i--;)
-            {
-                data_[i] = static_cast<T>(*(il.begin() + i));
-            }
-            return *this;
-        }
-        Tensor(const std::initializer_list<std::initializer_list<float>> &il) : data_(new T[M]())
+        Tensor(const std::initializer_list<T> &il) : data_(new T[M]())
         {
             for (int i = M; i--;) // prohibition of using i--
             {
-                data_[i] = *(il.begin() + i);
+                if (std::is_arithmetic_v<T>)
+                {
+                    data_[i] = static_cast<T>(*(il.begin() + i));
+                }
+                else
+                {
+                    data_[i] = *(il.begin() + i);  // call copy=
+                }
             }
         }
         Tensor(Tensor *other_p) : data_(nullptr)

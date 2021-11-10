@@ -71,46 +71,65 @@ namespace Core
     class MeshComponent : public Component
     {
     private:
-        std::vector<Vector3f> vertices_;
+        std::vector<Vector3f> positions_;
         std::vector<Vector3f> uvs_;
         std::vector<Vector3f> normals_;
         std::vector<Matrix3i> faces_;
-        std::vector<Tensor<Tensor<Tensor<float, 3>, 3>, 3>> all_faces_;
+        // std::vector<Tensor<Tensor<Tensor<float, 3>, 3>, 3>> all_faces_;
 
     public:
         MeshComponent(const std::string &obj_filename) : Component()
         {
-            Utils::load_obj_file(obj_filename, &vertices_, &uvs_, &normals_, &faces_);
-            all_faces_ = unpack_index();  // vertices uvs normals
+            Utils::load_obj_file(obj_filename, &positions_, &uvs_, &normals_, &faces_);
+            // all_faces_ = unpack_index(positions_, uvs_, normals_); // vertices uvs normals
         }
 
-        std::vector<Tensor<Tensor<Tensor<float, 3>, 3>, 3>> unpack_index()
+        // // according to the face index group,
+        // std::vector<Tensor<Tensor<Tensor<float, 3>, 3>, 3>> unpack_index(std::vector<Vector3f> vertexes, std::vector<Vector3f> uvs, std::vector<Vector3f> normals)
+        // {
+        //     std::vector<Tensor<Tensor<Tensor<float, 3>, 3>, 3>> ret;
+        //     Tensor<Tensor<Tensor<float, 3>, 3>, 3> tmp;
+        //     for (auto f : faces_)
+        //     {
+        //         for (size_t i = 0; i < 3; ++i)
+        //         {
+        //             tmp[i][0] = vertexes[f[i][0]];
+        //             tmp[i][1] = uvs[f[i][1]];
+        //             tmp[i][2] = normals[f[i][2]];
+        //         }
+        //         ret.push_back(tmp);
+        //     }
+        //     return ret;
+        // }
+
+        // std::vector<Tensor<Matrix3f, 3>> &get_all_faces()
+        // {
+        //     return all_faces_;
+        // }
+
+        std::vector<Matrix3i> &get_all_faces()
         {
-            std::vector<Tensor<Tensor<Tensor<float, 3>, 3>, 3>> ret;
-            Tensor<Tensor<Tensor<float, 3>, 3>, 3> tmp;
-            for (auto f : faces_)
-            {
-                for (int i = 0; i < 3; ++i)
-                {
-                    tmp[i][0] = vertices_[f[i][0]];
-                    tmp[i][1] = uvs_[f[i][1]];
-                    tmp[i][2] = normals_[f[i][2]];
-                }
-                ret.push_back(tmp);
-            }
-            return ret;
+            return faces_;
         }
 
-        std::vector<Tensor<Matrix3f, 3>> &get_all_faces()
+        std::vector<Vector3f> &get_all_vertexes()
         {
-            return all_faces_;
+            return positions_;
+        }
+        std::vector<Vector3f> &get_all_uvs()
+        {
+            return uvs_;
+        }
+        std::vector<Vector3f> &get_all_normals()
+        {
+            return normals_;
         }
     };
 
     class CameraComponent : public Component
     {
     private:
-        unsigned char *render_image_;
+        unsigned char *render_buffer_;
 
         float near_;
         float far_;
@@ -123,7 +142,7 @@ namespace Core
 
     public:
         CameraComponent(float near = 0.1, float far = 100, float vertical_angle_of_view = 120, float horizontal_angle_of_view = 60)
-            : Component(), render_image_(new unsigned char[Settings::WIDTH * Settings::HEIGHT * 3]), near_(near), far_(far), vertical_angle_of_view_(vertical_angle_of_view), horizontal_angle_of_view_(horizontal_angle_of_view)
+            : Component(), render_buffer_(new unsigned char[Settings::WIDTH * Settings::HEIGHT * 3]), near_(near), far_(far), vertical_angle_of_view_(vertical_angle_of_view), horizontal_angle_of_view_(horizontal_angle_of_view)
         {
             M_persp_ = Matrix4f{{near_, 0, 0, 0}, {0, near_, 0, 0}, {0, 0, near_ + far_, -near_ * far_}, {0, 0, 1, 0}};
         }
@@ -138,9 +157,9 @@ namespace Core
             T_view_[2][3] *= -1;
         }
 
-        unsigned char *get_render_image()
+        unsigned char *get_render_buffer()
         {
-            return render_image_;
+            return render_buffer_;
         }
 
         Matrix4f getV()
@@ -148,8 +167,9 @@ namespace Core
             return R_view_.mul(T_view_);
         }
 
-        Matrix4f getP(){
-            return M_persp;
+        Matrix4f getP()
+        {
+            return M_persp_;
         }
 
         Matrix4f getVP()
@@ -160,13 +180,10 @@ namespace Core
         Matrix4f getViewPort(const Vector2i &screen)
         {
             Matrix4f ret = indentity<float, 4>();
-            std::cout << near_ << std::endl;
-            // std::cout << horizontal_angle_of_view_ << std::endl;
-            // std::cout << std::tan(horizontal_angle_of_view_ / 2 / PI / 2) << std::endl;
-            // float f1 = static_cast<float>(screen[0] / (2 * near_ * std::tan(horizontal_angle_of_view_ / 2 / PI / 2)));
-            // float f2 = static_cast<float>(screen[1] / (2 * near_ * std::tan(vertical_angle_of_view_ / 2 / PI / 2)));
-            // ret[0][0] = f1;
-            // ret[1][1] = f2;
+            float f1 = static_cast<float>(screen[0] / (2 * near_ * std::tan(horizontal_angle_of_view_ / 2 / PI / 2)));
+            float f2 = static_cast<float>(screen[1] / (2 * near_ * std::tan(vertical_angle_of_view_ / 2 / PI / 2)));
+            ret[0][0] = f1;
+            ret[1][1] = f2;
             return ret;
         }
     };

@@ -80,9 +80,14 @@ namespace Core
                           "Template param must be component");
 
             std::vector<T *> ret;
+            T *tmp;
             for (auto iter = entities_.begin(); iter != entities_.end(); iter++)
             {
-                ret.push_back(iter->second->get_component<T>());
+                tmp = iter->second->get_component<T>();  // it will return nullptr if not find component
+                if (tmp != nullptr)
+                {
+                    ret.push_back(tmp);
+                }
             }
             return ret;
         }
@@ -153,20 +158,12 @@ namespace Core
         {
             Scene *scene = new Scene("Default");
 
-            // if (all_scenes.find(scene->id()) != all_scenes.end())
-            // {
-            //     std::clog << "[" << scene->id() + "] is existed" << std::endl;
-            //     return;
-            // }
-            // all_scenes[scene->id()] = scene;
-
             scene->add_entity(new Entity("HeadObj"));
             scene->get_entity("HeadObj")->add_component(new MeshComponent("../obj/african_head.obj")); // Linux
 
             scene->add_entity(new Core::Entity("MainCamera"));
-            CameraComponent *p = new CameraComponent();
             scene->get_entity("MainCamera")->add_component(new CameraComponent(0.1f, 100.f, 120.f, 90.f));
-            // scene->get_entity("MainCamera")->get_component<CameraComponent>()->lookat(Vector3f{1, 0, 0}, Vector3f{0, 1, 0});
+            scene->get_entity("MainCamera")->get_component<CameraComponent>()->lookat(Vector3f{1, 0, 0}, Vector3f{0, 1, 0});
 
             return scene;
         }

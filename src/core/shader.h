@@ -18,31 +18,38 @@ namespace Core
         // Pixmap
     };  // user self-defined
 
-    struct a2v
+    struct VertexInput
     {
         Vector3f POSITION;
         Vector3f NORMAL;
-        Vector2f TEXCOORD0;
-    };  // application inputs
+        Vector3f TEXCOORD0;
+    };  // vertex stage inputs
 
-    struct v2f
+    struct VertexOutput
     {
-        Vector3f SV_POSITION;
-        Vector4i COLOR0;
-    };  // vertex shader outpus
+        Vector3f POSITION;
+        Vector3f NORMAL;
+        Vector3f COLOR0;
+    };  // vertex stage outputs
+
+    struct FragmentInput
+    {
+        // Vector2i SV_POSITION;
+        Vector3f SV_NORMAL;
+        Vector3f COLOR0;
+    };  // frag stage inputs
 
     
-
-    v2f vert(const a2v &v, const Attribute &attribute, const Uniform &uniform)
+    VertexOutput vert(const VertexInput &i, const Attribute &attribute, const Uniform &uniform)
     {
-        v2f o;
-        o.SV_POSITION = attribute.ViewPort.mul(attribute.P.mul(attribute.V.mul(attribute.M.mul(v.POSITION.reshape<4>(0))))).reshape<3>();
+        VertexOutput o;
+        o.POSITION = attribute.ViewPort.mul(attribute.P.mul(attribute.V.mul(attribute.M.mul(i.POSITION.reshape<4>(0))))).reshape<3>();
         return o;
     }
 
-    Vector4i frag(v2f i)
+    Vector4i frag(FragmentInput i)
     {
-        return Vector4i{0, 0, 0, 0};
+        return Vector4i{100, 0, 0, 0};
     }
 
 }
