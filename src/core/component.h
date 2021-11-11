@@ -29,23 +29,23 @@ namespace Core
             R_model_ = indentity<float, 4>();
         }
         virtual ~Component() {} // virtual func is necessary, otherwise dynamic_cast(base->drived) will fail
-        void set_position(Vector3f pos)
+        void set_position(const Vector3f &pos)
         {
             T_model_[0][3] = pos[0];
             T_model_[1][3] = pos[1];
             T_model_[2][3] = pos[2];
         }
-        void set_scala(Vector3f scala)
+        void set_scala(const Vector3f &scala)
         {
             S_model_[0][0] = scala[0];
             S_model_[1][1] = scala[1];
             S_model_[2][2] = scala[2];
         }
-        void set_rotation(Vector3f gaze, Vector3f up)
+        void set_rotation(const Vector3f &gaze, const Vector3f &up)
         {
-            Vector3f w = gaze.normal();                 // x->w
-            Vector3f u = up.normal();                   // y->u
-            Vector3f v = Utils::cross_product_3D(w, u); // z->v
+            Vector3f w = gaze.normal();                          // x->w
+            Vector3f u = up.normal();                            // y->u
+            Vector3f v = Utils::cross_product_3D(w, u).normal(); // z->v
             for (int i = 0; i < 3; ++i)
             {
                 R_model_[i][0] = w[i];
@@ -75,54 +75,35 @@ namespace Core
         std::vector<Vector3f> uvs_;
         std::vector<Vector3f> normals_;
         std::vector<Matrix3i> faces_;
-        // std::vector<Tensor<Tensor<Tensor<float, 3>, 3>, 3>> all_faces_;
+        std::vector<Tensor<Tensor<Tensor<float, 3>, 3>, 3>> all_faces_;
 
     public:
         MeshComponent(const std::string &obj_filename) : Component()
         {
             Utils::load_obj_file(obj_filename, &positions_, &uvs_, &normals_, &faces_);
-            // all_faces_ = unpack_index(positions_, uvs_, normals_); // vertices uvs normals
+            all_faces_ = unpack_index(positions_, uvs_, normals_); // vertices uvs normals
         }
 
-        // // according to the face index group,
-        // std::vector<Tensor<Tensor<Tensor<float, 3>, 3>, 3>> unpack_index(std::vector<Vector3f> vertexes, std::vector<Vector3f> uvs, std::vector<Vector3f> normals)
-        // {
-        //     std::vector<Tensor<Tensor<Tensor<float, 3>, 3>, 3>> ret;
-        //     Tensor<Tensor<Tensor<float, 3>, 3>, 3> tmp;
-        //     for (auto f : faces_)
-        //     {
-        //         for (size_t i = 0; i < 3; ++i)
-        //         {
-        //             tmp[i][0] = vertexes[f[i][0]];
-        //             tmp[i][1] = uvs[f[i][1]];
-        //             tmp[i][2] = normals[f[i][2]];
-        //         }
-        //         ret.push_back(tmp);
-        //     }
-        //     return ret;
-        // }
-
-        // std::vector<Tensor<Matrix3f, 3>> &get_all_faces()
-        // {
-        //     return all_faces_;
-        // }
-
-        std::vector<Matrix3i> &get_all_faces()
+        std::vector<Tensor<Tensor<Tensor<float, 3>, 3>, 3>> unpack_index(const std::vector<Vector3f> &vertexes, const std::vector<Vector3f> &uvs, const std::vector<Vector3f> &normals)
         {
-            return faces_;
+            std::vector<Tensor<Tensor<Tensor<float, 3>, 3>, 3>> ret;
+            Tensor<Tensor<Tensor<float, 3>, 3>, 3> tmp;
+            for (auto f : faces_)
+            {
+                for (size_t i = 0; i < 3; ++i)
+                {
+                    tmp[i][0] = vertexes[f[0][i]];
+                    tmp[i][1] = uvs[f[1][i]];
+                    tmp[i][2] = normals[f[2][i]];
+                }
+                ret.push_back(tmp);
+            }
+            return ret;
         }
 
-        std::vector<Vector3f> &get_all_vertexes()
+        std::vector<Tensor<Tensor<Tensor<float, 3>, 3>, 3>> &get_all_faces()
         {
-            return positions_;
-        }
-        std::vector<Vector3f> &get_all_uvs()
-        {
-            return uvs_;
-        }
-        std::vector<Vector3f> &get_all_normals()
-        {
-            return normals_;
+            return all_faces_;
         }
     };
 
@@ -147,9 +128,9 @@ namespace Core
             M_persp_ = Matrix4f{{near_, 0, 0, 0}, {0, near_, 0, 0}, {0, 0, near_ + far_, -near_ * far_}, {0, 0, 1, 0}};
         }
 
-        void lookat(const Vector3f &pos, const Vector3f &up)
+        void lookat(const Vector3f &gaze, const Vector3f &up)
         {
-            set_rotation(get_position() - pos, up);
+            set_rotation(gaze, up); // set x y axis direction
             R_view_ = R_model_.transpose();
             T_view_ = T_model_;
             T_view_[0][3] *= -1;
@@ -179,12 +160,15 @@ namespace Core
 
         Matrix4f getViewPort(const Vector2i &screen)
         {
-            Matrix4f ret = indentity<float, 4>();
+            Matrix4f S = indentity<float, 4>();
             float f1 = static_cast<float>(screen[0] / (2 * near_ * std::tan(horizontal_angle_of_view_ / 2 / PI / 2)));
             float f2 = static_cast<float>(screen[1] / (2 * near_ * std::tan(vertical_angle_of_view_ / 2 / PI / 2)));
-            ret[0][0] = f1;
-            ret[1][1] = f2;
-            return ret;
+            S[0][0] = f1;
+            S[1][1] = f2;
+            Matrix4f T = indentity<float, 4>();
+            T[0][3] = -Settings::WIDTH / 2;
+            T[1][3] = -Settings::HEIGHT / 2;
+            return T.mul(S);
         }
     };
 }

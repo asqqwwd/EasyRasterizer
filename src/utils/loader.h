@@ -68,9 +68,9 @@ namespace Utils
                 while (iss >> vert_idx >> trash >> uv_idx >> trash >> normal_idx)
                 {
                     vert_idx--, uv_idx--, normal_idx--; // in wavefront obj all indices start at 1, not zero
-                    m[i][0] = vert_idx;
-                    m[i][1] = uv_idx;
-                    m[i][2] = normal_idx;
+                    m[0][i] = vert_idx;
+                    m[1][i] = uv_idx;
+                    m[2][i] = normal_idx;
                     ++i;
                 }
                 faces_p->push_back(m);

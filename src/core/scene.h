@@ -83,7 +83,7 @@ namespace Core
             T *tmp;
             for (auto iter = entities_.begin(); iter != entities_.end(); iter++)
             {
-                tmp = iter->second->get_component<T>();  // it will return nullptr if not find component
+                tmp = iter->second->get_component<T>(); // it will return nullptr if not find component
                 if (tmp != nullptr)
                 {
                     ret.push_back(tmp);
@@ -162,8 +162,9 @@ namespace Core
             scene->get_entity("HeadObj")->add_component(new MeshComponent("../obj/african_head.obj")); // Linux
 
             scene->add_entity(new Core::Entity("MainCamera"));
-            scene->get_entity("MainCamera")->add_component(new CameraComponent(0.1f, 100.f, 120.f, 90.f));
-            scene->get_entity("MainCamera")->get_component<CameraComponent>()->lookat(Vector3f{1, 0, 0}, Vector3f{0, 1, 0});
+            scene->get_entity("MainCamera")->add_component(new CameraComponent(0.1f, 10.f, 90.f, 90.f));
+            scene->get_entity("MainCamera")->get_component<CameraComponent>()->set_position(Vector3f{-1, 0, 0});
+            scene->get_entity("MainCamera")->get_component<CameraComponent>()->lookat(Vector3f{1, 0, 0} - scene->get_entity("MainCamera")->get_component<CameraComponent>()->get_position(), Vector3f{0, 1, 0});
 
             return scene;
         }
