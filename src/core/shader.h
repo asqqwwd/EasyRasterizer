@@ -2,6 +2,7 @@
 #define ERER_CORE_SHADER_H_
 
 #include "data_structure.hpp"
+#include "tgaimage.h"
 
 namespace Core
 {
@@ -12,9 +13,11 @@ namespace Core
         Matrix4f P;
         Matrix4f ViewPort;
         Vector3f light_dir;
+        float light_intensity;
     }; // system attributes
     struct Uniform
     {
+        TGAImage albedo; // control the primary color of the surface
         // Pixmap
     }; // user self-defined
 
@@ -39,16 +42,21 @@ namespace Core
         Vector3i COLOR0;
     }; // frag stage inputs
 
-    VertexOutput vert(const VertexInput &i, const Attribute &attribute, const Uniform &uniform)
+    Vector3i sampling(const TGAImage &img, const Vector3f &uv)
     {
-        VertexOutput o;
-        o.POSITION = attribute.ViewPort.mul(attribute.P.mul(attribute.V.mul(attribute.M.mul(i.POSITION.reshape<4>(0))))).reshape<3>();
-        // o.POSITION = attribute.P.mul(attribute.V.mul(attribute.M.mul(i.POSITION.reshape<4>(0)))).reshape<3>();
-        // std::cout << attribute.M;
-        // std::cout << attribute.V;
-        // std::cout << attribute.P;
-        o.COLOR0 = Vector3i{255, 255, 255};
-        return o;
+        TGAColor tmp = img.get(static_cast<int>(uv[0] * img.get_width()), static_cast<int>((1 - uv[1]) * img.get_height()));
+        return Vector3i{tmp[2], tmp[1], tmp[0]}; // bgr->rgb
+    }
+
+    VertexOutput vert(const VertexInput &vi, const Attribute &attribute, const Uniform &uniform)
+    {
+        VertexOutput vo;
+        Vector4f tmp = attribute.ViewPort.mul(attribute.P.mul(attribute.V.mul(attribute.M.mul(vi.POSITION.reshape<4>(1)))));
+        tmp = tmp / tmp[3];
+        vo.POSITION = tmp.reshape<3>();
+        // vo.COLOR0 = Vector3i{static_cast<int>(vi.TEXCOORD0[0] * 255), static_cast<int>(vi.TEXCOORD0[1] * 255), static_cast<int>(vi.TEXCOORD0[2] * 255)};
+        vo.COLOR0 = sampling(uniform.albedo, vi.TEXCOORD0);
+        return vo;
     }
 
     Vector4i frag(FragmentInput i)

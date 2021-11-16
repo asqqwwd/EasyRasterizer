@@ -43,7 +43,7 @@ namespace Utils
             }
             else if (!line.compare(0, 3, "vt "))
             {
-                iss >> trash; // read {vt } in {vt 0.1 0.2 0} to trash, stopping while encounter space charactor
+                iss >> trash >> trash; // read {vt } in {vt 0.1 0.2 0} to trash, stopping while encounter space charactor
                 for (int i = 0; i < 3; i++)
                 {
                     iss >> value;
@@ -53,7 +53,7 @@ namespace Utils
             }
             else if (!line.compare(0, 3, "vn "))
             {
-                iss >> trash; // read {vn } in {vn 0.1 0.2 0.3} to trash, stopping while encounter space charactor
+                iss >> trash >> trash; // read {vn } in {vn 0.1 0.2 0.3} to trash, stopping while encounter space charactor
                 for (int i = 0; i < 3; i++)
                 {
                     iss >> value;

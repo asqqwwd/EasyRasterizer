@@ -31,9 +31,10 @@ namespace Core
         }
 
         template <typename T>
-        void add_component(T *component)
+        T* add_component(T *component)
         {
             components_.push_back(component);
+            return component;
         }
 
         std::vector<Component *> &get_all_components()

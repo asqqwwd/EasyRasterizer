@@ -8,6 +8,8 @@
 #include <cmath>
 
 #include "data_structure.hpp"
+#include "shader.h"
+#include "tgaimage.h"
 #include "../utils/loader.h"
 #include "../utils/math.h"
 #include "../settings.h"
@@ -29,33 +31,41 @@ namespace Core
             R_model_ = indentity<float, 4>();
         }
         virtual ~Component() {} // virtual func is necessary, otherwise dynamic_cast(base->drived) will fail
-        void set_position(const Vector3f &pos)
+        Component *set_position(const Vector3f &pos)
         {
             T_model_[0][3] = pos[0];
             T_model_[1][3] = pos[1];
+            float far_;
+            float vertical_angle_of_view_;
+            float horizontal_angle_of_view_;
+
+            Matrix4f R_view_;
             T_model_[2][3] = pos[2];
+            return this;
         }
-        void set_scala(const Vector3f &scala)
+        Component *set_scala(const Vector3f &scala)
         {
             S_model_[0][0] = scala[0];
             S_model_[1][1] = scala[1];
             S_model_[2][2] = scala[2];
+            return this;
         }
-        void set_rotation(const Vector3f &gaze, const Vector3f &up)
+        Component *set_rotation(const Vector3f &x, const Vector3f &y)
         {
-            Vector3f w = gaze.normal();                          // x->w
-            Vector3f u = up.normal();                            // y->u
-            Vector3f v = Utils::cross_product_3D(w, u).normal(); // z->v
-            for (int i = 0; i < 3; ++i)
+            Vector3f w = x.normal();
+            Vector3f u = y.normal();
+            Vector3f v = Utils::cross_product_3D(w, u).normal();
+            for (size_t i = 0; i < 3; ++i)
             {
-                R_model_[i][0] = w[i];
-                R_model_[i][1] = u[i];
-                R_model_[i][2] = v[i];
+                R_model_[i][0] = w[i]; // x->x
+                R_model_[i][1] = u[i]; // y->y
+                R_model_[i][2] = v[i]; // z->cross(x,y)
             }
+            return this;
         }
         Vector3f get_position()
         {
-            return Vector3f{T_model_[0][3], T_model_[1][3], T_model_[1][3]};
+            return Vector3f{T_model_[0][3], T_model_[1][3], T_model_[2][3]};
         }
         Vector3f get_scala()
         {
@@ -71,39 +81,51 @@ namespace Core
     class MeshComponent : public Component
     {
     private:
-        std::vector<Vector3f> positions_;
-        std::vector<Vector3f> uvs_;
-        std::vector<Vector3f> normals_;
-        std::vector<Matrix3i> faces_;
-        std::vector<Tensor<Tensor<Tensor<float, 3>, 3>, 3>> all_faces_;
+        std::vector<VertexInput> in_vertexes_;
+        TGAImage albedo_;
 
     public:
-        MeshComponent(const std::string &obj_filename) : Component()
+        MeshComponent()
         {
-            Utils::load_obj_file(obj_filename, &positions_, &uvs_, &normals_, &faces_);
-            all_faces_ = unpack_index(positions_, uvs_, normals_); // vertices uvs normals
         }
 
-        std::vector<Tensor<Tensor<Tensor<float, 3>, 3>, 3>> unpack_index(const std::vector<Vector3f> &vertexes, const std::vector<Vector3f> &uvs, const std::vector<Vector3f> &normals)
+        MeshComponent *load_vertexes(const std::string &filename)
         {
-            std::vector<Tensor<Tensor<Tensor<float, 3>, 3>, 3>> ret;
-            Tensor<Tensor<Tensor<float, 3>, 3>, 3> tmp;
-            for (auto f : faces_)
+            std::vector<Vector3f> positions;
+            std::vector<Vector3f> uvs;
+            std::vector<Vector3f> normals;
+            std::vector<Matrix3i> faces;
+            Utils::load_obj_file(filename, &positions, &uvs, &normals, &faces);
+
+            VertexInput tmp;
+            for (auto f : faces)
             {
                 for (size_t i = 0; i < 3; ++i)
                 {
-                    tmp[i][0] = vertexes[f[0][i]];
-                    tmp[i][1] = uvs[f[1][i]];
-                    tmp[i][2] = normals[f[2][i]];
+                    tmp.POSITION = positions[f[0][i]];
+                    tmp.TEXCOORD0 = uvs[f[1][i]];
+                    tmp.NORMAL = normals[f[2][i]];
+                    in_vertexes_.push_back(tmp);
                 }
-                ret.push_back(tmp);
             }
-            return ret;
+            assert(in_vertexes_.size() == faces.size() * 3);
+            return this;
         }
 
-        std::vector<Tensor<Tensor<Tensor<float, 3>, 3>, 3>> &get_all_faces()
+        MeshComponent *load_albedo_texture(const std::string &filename)
         {
-            return all_faces_;
+            albedo_.read_tga_file(filename);
+            return this;
+        }
+
+        const TGAImage &get_albedo_texture()
+        {
+            return albedo_;
+        }
+
+        std::vector<VertexInput> &get_all_vertexes()
+        {
+            return in_vertexes_;
         }
     };
 
@@ -123,19 +145,29 @@ namespace Core
 
     public:
         CameraComponent(float near = 0.1, float far = 100, float vertical_angle_of_view = 120, float horizontal_angle_of_view = 60)
-            : Component(), render_buffer_(new unsigned char[Settings::WIDTH * Settings::HEIGHT * 3]), near_(near), far_(far), vertical_angle_of_view_(vertical_angle_of_view), horizontal_angle_of_view_(horizontal_angle_of_view)
+            : render_buffer_(new unsigned char[Settings::WIDTH * Settings::HEIGHT * 3]), near_(near), far_(far), vertical_angle_of_view_(vertical_angle_of_view), horizontal_angle_of_view_(horizontal_angle_of_view)
         {
             M_persp_ = Matrix4f{{near_, 0, 0, 0}, {0, near_, 0, 0}, {0, 0, near_ + far_, -near_ * far_}, {0, 0, 1, 0}};
         }
 
-        void lookat(const Vector3f &gaze, const Vector3f &up)
+        CameraComponent *lookat(const Vector3f &lookat_pos, const Vector3f &up)
         {
-            set_rotation(gaze, up); // set x y axis direction
+            Vector3f gaze = const_cast<Vector3f &>(lookat_pos) - get_position();
+            Vector3f w = gaze.normal();
+            Vector3f u = up.normal();
+            Vector3f v = Utils::cross_product_3D(w, u).normal();
+            for (int i = 0; i < 3; ++i)
+            {
+                R_model_[i][0] = v[i]; // x->cross(gaze,up)
+                R_model_[i][1] = u[i]; // y->up
+                R_model_[i][2] = w[i]; // z->gaze
+            }
             R_view_ = R_model_.transpose();
             T_view_ = T_model_;
             T_view_[0][3] *= -1;
             T_view_[1][3] *= -1;
             T_view_[2][3] *= -1;
+            return this;
         }
 
         unsigned char *get_render_buffer()
@@ -160,15 +192,43 @@ namespace Core
 
         Matrix4f getViewPort(const Vector2i &screen)
         {
-            Matrix4f S = indentity<float, 4>();
-            float f1 = static_cast<float>(screen[0] / (2 * near_ * std::tan(horizontal_angle_of_view_ / 2 / PI / 2)));
-            float f2 = static_cast<float>(screen[1] / (2 * near_ * std::tan(vertical_angle_of_view_ / 2 / PI / 2)));
-            S[0][0] = f1;
-            S[1][1] = f2;
-            Matrix4f T = indentity<float, 4>();
-            T[0][3] = -Settings::WIDTH / 2;
-            T[1][3] = -Settings::HEIGHT / 2;
-            return T.mul(S);
+            Matrix4f TS = indentity<float, 4>();
+            float f1 = static_cast<float>(screen[0] / (2 * near_ * std::tan(horizontal_angle_of_view_ / 360 * PI)));
+            float f2 = static_cast<float>(screen[1] / (2 * near_ * std::tan(vertical_angle_of_view_ / 360 * PI)));
+            TS[0][0] = f1;
+            TS[1][1] = f2;
+            TS[0][3] = screen[0] / 2;
+            TS[1][3] = screen[1] / 2;
+            return TS;
+        }
+    };
+
+    class LightComponent : public Component
+    {
+    private:
+        float intensity_;
+
+    public:
+        LightComponent() : intensity_(100.f)
+        {
+        }
+
+        LightComponent *lookat(const Vector3f &lookat_pos, const Vector3f &up)
+        {
+            Vector3f gaze = const_cast<Vector3f &>(lookat_pos) - get_position();
+            set_rotation(gaze, up);
+            return this;
+        }
+
+        LightComponent *set_intensity(float intensity)
+        {
+            intensity_ = intensity;
+            return this;
+        }
+
+        float get_intensity()
+        {
+            return intensity_;
         }
     };
 }

@@ -159,12 +159,16 @@ namespace Core
             Scene *scene = new Scene("Default");
 
             scene->add_entity(new Entity("HeadObj"));
-            scene->get_entity("HeadObj")->add_component(new MeshComponent("../obj/african_head.obj")); // Linux
+            scene->get_entity("HeadObj")->add_component(new MeshComponent())
+            ->load_vertexes("../obj/african_head.obj")
+            ->load_albedo_texture("../obj/african_head_diffuse.tga");
 
             scene->add_entity(new Core::Entity("MainCamera"));
-            scene->get_entity("MainCamera")->add_component(new CameraComponent(0.1f, 10.f, 90.f, 90.f));
-            scene->get_entity("MainCamera")->get_component<CameraComponent>()->set_position(Vector3f{-1, 0, 0});
-            scene->get_entity("MainCamera")->get_component<CameraComponent>()->lookat(Vector3f{1, 0, 0} - scene->get_entity("MainCamera")->get_component<CameraComponent>()->get_position(), Vector3f{0, 1, 0});
+            Vector3f main_camera_pos{2, 0, 0};
+            scene->get_entity("MainCamera")->add_component(new CameraComponent(1.f, 10.f, 90.f, 90.f))
+            ->set_position(main_camera_pos);
+            scene->get_entity("MainCamera")->get_component<CameraComponent>()
+            ->lookat(-1 * main_camera_pos, Vector3f{0, 1, 0});
 
             return scene;
         }

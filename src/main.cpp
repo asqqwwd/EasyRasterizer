@@ -17,11 +17,13 @@
 #include "core/scene.h"
 #include "core/entity.h"
 #include "core/component.h"
+#include "core/time.h"
 
 using namespace std;
 
 void display(void)
 {
+    Core::Time::clock();
     for (auto sys : Core::all_systems)
     {
         sys->update();
@@ -44,6 +46,7 @@ void window_init(int argc, char **argv)
 void game_init()
 {
     new Core::RasterizeSystem();
+    new Core::MotionSystem();
     Core::cd_to_scene(Core::SceneFactory::build_default_scene());
 }
 
@@ -53,7 +56,8 @@ int main(int argc, char **argv)
     game_init();
 
     glutDisplayFunc(display);
-    glutMainLoop(); // main loop
+    glutIdleFunc(display); // force flush when idle
+    glutMainLoop();        // main loop
 
     return 0;
 }

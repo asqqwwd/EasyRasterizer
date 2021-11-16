@@ -3,10 +3,13 @@
 
 #include <iostream>
 #include <vector>
-#include <stdlib.h>
+#include <memory>   // for smart pointer
+#include <stdlib.h> // for math
+#include <float.h>  // for FLT_MAX
 
 #include "scene.h"
 #include "shader.h"
+#include "time.h"
 #include "../settings.h"
 
 namespace Core
@@ -31,9 +34,17 @@ namespace Core
     class RasterizeSystem : public System
     {
     private:
+        Attribute attribute_; // system attributes
+        Uniform uniform_;     // user self-defined
+
+        std::vector<VertexOutput> out_vertexes_;
+
+        std::vector<FragmentInput> fragments_;
+        float *depth_buffer_;          // assuming that all depth is larger than 0
+        unsigned char *render_buffer_; // width*height*3, data format: rgb rgb ...
+
         Vector3f get_barycentric_by_vector(Vector2i *pts, Vector2i pt)
         {
-
             Vector3i uv = Utils::cross_product_3D(Vector3i{pts[0][0] - pts[1][0], pts[0][0] - pts[2][0], pt[0] - pts[0][0]}, Vector3i{pts[0][1] - pts[1][1], pts[0][1] - pts[2][1], pt[1] - pts[0][1]});
             if (uv[2] == 0)
             {
@@ -69,50 +80,35 @@ namespace Core
                     }
                     /* Depth interpolate and test */
                     float interpolated_depth = bc[0] * depths[0] + bc[1] * depths[1] + bc[2] * depths[2];
-                    if (interpolated_depth <= depth_buffer_[x * Settings::WIDTH + y])
+                    if (interpolated_depth >= depth_buffer_[y * Settings::WIDTH + x])
                     {
                         continue;
                     }
-                    depth_buffer_[x * Settings::WIDTH + y] = interpolated_depth;
+                    depth_buffer_[y * Settings::WIDTH + x] = interpolated_depth;
                     /* Color and Normal interpolate*/
                     for (size_t i = 0; i < 3; ++i)
                     {
                         interpolated_color[i] = static_cast<int>(bc[0] * colors[0][i] + bc[1] * colors[1][i] + bc[2] * colors[2][i]);
                         interpolated_normal[i] = bc[0] * normals[0][i] + bc[1] * normals[1][i] + bc[2] * normals[2][i];
                     }
-                    fragments_[x * Settings::WIDTH + y].SV_NORMAL = interpolated_normal;
-                    fragments_[x * Settings::WIDTH + y].COLOR0 = interpolated_color;
+                    fragments_[y * Settings::WIDTH + x].SV_NORMAL = interpolated_normal;
+                    fragments_[y * Settings::WIDTH + x].COLOR0 = interpolated_color;
                 }
             }
         }
 
-        Attribute attribute_; // system attributes
-        Uniform uniform_;     // user self-defined
-        VertexInput vi_;
-        VertexOutput vo_;
-        FragmentInput fi_;
-
-        std::vector<VertexInput> in_vertexes_;
-        std::vector<VertexOutput> out_vertexes_;
-
-        std::vector<FragmentInput> fragments_;
-        float *depth_buffer_;          // assuming that all depth is larger than 0
-        unsigned char *render_buffer_; // width*height*3, data format: rgb rgb ...
-
     public:
         RasterizeSystem() : System(this)
         {
-            fragments_ = std::vector<FragmentInput>(Settings::WIDTH * Settings::HEIGHT);
-
             depth_buffer_ = new float[Settings::WIDTH * Settings::HEIGHT]{};              // padding with zeros
             render_buffer_ = new unsigned char[Settings::WIDTH * Settings::HEIGHT * 3]{}; // padding with zeros
         }
 
         void update()
         {
-            Vector3f *pts = new Vector3f[3];
-            Vector3i *colors = new Vector3i[3];
-            Vector3f *normals = new Vector3f[3];
+            auto pts = std::make_unique<Vector3f[]>(3);
+            auto colors = std::make_unique<Vector3i[]>(3);
+            auto normals = std::make_unique<Vector3f[]>(3);
             for (CameraComponent *cc : get_all_components<CameraComponent>())
             {
                 attribute_.ViewPort = cc->getViewPort(Vector2i{Settings::WIDTH, Settings::HEIGHT});
@@ -121,30 +117,20 @@ namespace Core
                 for (MeshComponent *mc : get_all_components<MeshComponent>())
                 {
                     attribute_.M = mc->getM();
-
-                    /* Load point data */
-                    auto all_faces = mc->get_all_faces();
-                    in_vertexes_.clear();
-                    for (size_t i = 0; i < all_faces.size(); ++i)
-                    {
-                        for (size_t j = 0; j < 3; ++j)
-                        {
-                            vi_.POSITION = all_faces[i][j][0];
-                            vi_.TEXCOORD0 = all_faces[i][j][1];
-                            vi_.NORMAL = all_faces[i][j][2];
-                            in_vertexes_.push_back(vi_);
-                        }
-                    }
+                    uniform_.albedo = mc->get_albedo_texture();
 
                     /* Pipline: vertex */
-                    out_vertexes_.clear();
-                    for (auto vi : in_vertexes_)
+                    out_vertexes_.clear(); // just move insert pointer to the start without deleting origin space
+                    for (auto vi : mc->get_all_vertexes())
                     {
-                        vo_ = vert(vi, attribute_, uniform_);
-                        out_vertexes_.push_back(vo_);
+                        out_vertexes_.push_back(vert(vi, attribute_, uniform_));
                     }
 
                     /* Pipline: barycentric cordination calculate + clip + depth test */
+                    fragments_.clear();
+                    fragments_.shrink_to_fit();
+                    fragments_ = std::vector<FragmentInput>(Settings::WIDTH * Settings::HEIGHT);
+                    std::fill(depth_buffer_, depth_buffer_ + Settings::WIDTH * Settings::HEIGHT, FLT_MAX);
                     for (size_t i = 0; i < out_vertexes_.size(); i = i + 3)
                     {
                         for (size_t j = 0; j < 3; ++j)
@@ -153,7 +139,7 @@ namespace Core
                             colors[j] = out_vertexes_[i + j].COLOR0;
                             normals[j] = out_vertexes_[i + j].NORMAL;
                         }
-                        interpolation(pts, colors, normals);
+                        interpolation(pts.get(), colors.get(), normals.get());
                     }
 
                     // Pipline: fragment
@@ -168,10 +154,24 @@ namespace Core
                 }
             }
         }
+    };
 
-        unsigned char *get_render_buffer()
+    class MotionSystem : public System
+    {
+    private:
+    public:
+        MotionSystem() : System(this)
         {
-            return render_buffer_;
+        }
+
+        void update()
+        {
+            // Test
+            // std::cout << Time::get_delta_time() << std::endl;
+            double w = 0.5;
+            static double theta = 0;
+            theta += w * Time::get_delta_time();
+            get_entity("HeadObj")->get_component<MeshComponent>()->set_rotation(Vector3f{static_cast<float>(std::cos(theta)), 0, static_cast<float>(std::sin(theta))}, Vector3f{0, 1, 0});
         }
     };
 
