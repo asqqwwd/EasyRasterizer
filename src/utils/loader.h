@@ -44,10 +44,10 @@ namespace Utils
             else if (!line.compare(0, 3, "vt "))
             {
                 iss >> trash >> trash; // read {vt } in {vt 0.1 0.2 0} to trash, stopping while encounter space charactor
-                for (int i = 0; i < 3; i++)
+                for (int i = 0; i < 2; i++)
                 {
                     iss >> value;
-                    v[i] = value;
+                    v[i] = value - static_cast<int>(value);
                 }
                 uvs_p->push_back(v);
             }

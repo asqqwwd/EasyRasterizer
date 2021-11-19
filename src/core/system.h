@@ -52,7 +52,7 @@ namespace Core
             }
             return Vector3f{1.f - 1.f * (uv[0] + uv[1]) / uv[2], 1.f * uv[0] / uv[2], 1.f * uv[1] / uv[2]};
         }
-        void interpolation(Vector3f *pts, Vector3i *colors, Vector3f *normals)
+        void interpolation(Vector3f *pts, Vector3f *colors, Vector3f *normals)
         {
             /* Round down x and y of pts */
             Vector2i *pts_xy = new Vector2i[3];
@@ -67,7 +67,7 @@ namespace Core
             Vector2i bbox_min{std::max(0, std::min({pts_xy[0][0], pts_xy[1][0], pts_xy[2][0]})), std::max(0, std::min({pts_xy[0][1], pts_xy[1][1], pts_xy[2][1]}))};
             Vector2i bbox_max{std::min(Settings::WIDTH - 1, std::max({pts_xy[0][0], pts_xy[1][0], pts_xy[2][0]})), std::min(Settings::HEIGHT - 1, std::max({pts_xy[0][1], pts_xy[1][1], pts_xy[2][1]}))};
             /* Padding color by barycentric coordinates */
-            Vector3i interpolated_color;
+            Vector3f interpolated_color;
             Vector3f interpolated_normal;
             for (int x = bbox_min[0]; x < bbox_max[0]; x++)
             {
@@ -88,7 +88,7 @@ namespace Core
                     /* Color and Normal interpolate*/
                     for (size_t i = 0; i < 3; ++i)
                     {
-                        interpolated_color[i] = static_cast<int>(bc[0] * colors[0][i] + bc[1] * colors[1][i] + bc[2] * colors[2][i]);
+                        interpolated_color[i] = bc[0] * colors[0][i] + bc[1] * colors[1][i] + bc[2] * colors[2][i];
                         interpolated_normal[i] = bc[0] * normals[0][i] + bc[1] * normals[1][i] + bc[2] * normals[2][i];
                     }
                     fragments_[y * Settings::WIDTH + x].SV_NORMAL = interpolated_normal;
@@ -107,50 +107,66 @@ namespace Core
         void update()
         {
             auto pts = std::make_unique<Vector3f[]>(3);
-            auto colors = std::make_unique<Vector3i[]>(3);
+            auto colors = std::make_unique<Vector3f[]>(3);
             auto normals = std::make_unique<Vector3f[]>(3);
             for (CameraComponent *cc : get_all_components<CameraComponent>())
             {
-                attribute_.ViewPort = cc->getViewPort(Vector2i{Settings::WIDTH, Settings::HEIGHT});
-                attribute_.V = cc->getV();
-                attribute_.P = cc->getP();
-                for (MeshComponent *mc : get_all_components<MeshComponent>())
+                for (LightComponent *lc : get_all_components<LightComponent>())
                 {
-                    attribute_.M = mc->getM();
-                    uniform_.albedo = mc->get_albedo_texture();
+                    attribute_.V = cc->getV();
+                    attribute_.P = cc->getP();
+                    attribute_.ViewPort = cc->getViewPort(Vector2i{Settings::WIDTH, Settings::HEIGHT});
 
-                    /* Pipline: vertex */
-                    out_vertexes_.clear(); // just move insert pointer to the start without deleting origin space
-                    for (auto vi : mc->get_all_vertexes())
-                    {
-                        out_vertexes_.push_back(vert(vi, attribute_, uniform_));
-                    }
+                    attribute_.world_light_dir = lc->get_light_dir();
+                    attribute_.world_light_pos = lc->get_position();
+                    attribute_.light_color = lc->get_light_color();
+                    attribute_.light_intensity = lc->get_light_intensity();
 
-                    /* Pipline: barycentric cordination calculate + clip + depth test */
-                    fragments_.clear();
-                    fragments_.shrink_to_fit();
-                    fragments_ = std::vector<FragmentInput>(Settings::WIDTH * Settings::HEIGHT);
-                    std::fill(depth_buffer_, depth_buffer_ + Settings::WIDTH * Settings::HEIGHT, FLT_MAX);
-                    for (size_t i = 0; i < out_vertexes_.size(); i = i + 3)
+                    attribute_.world_view_dir = cc->get_lookat_dir();
+                    attribute_.specular_color = lc->get_specular_color();
+
+                    attribute_.ambient = lc->get_ambient_color();
+
+                    for (MeshComponent *mc : get_all_components<MeshComponent>())
                     {
-                        for (size_t j = 0; j < 3; ++j)
+
+                        attribute_.M = mc->getM();
+                        uniform_.albedo = mc->get_albedo_texture();
+                        uniform_.gloss = mc->get_gloss();
+
+                        /* Pipline: vertex */
+                        out_vertexes_.clear(); // just move insert pointer to the start without deleting origin space
+                        for (auto vi : mc->get_all_vertexes())
                         {
-                            pts[j] = out_vertexes_[i + j].POSITION;
-                            colors[j] = out_vertexes_[i + j].COLOR0;
-                            normals[j] = out_vertexes_[i + j].NORMAL;
+                            out_vertexes_.push_back(vert(vi, attribute_, uniform_));
                         }
-                        interpolation(pts.get(), colors.get(), normals.get());
-                    }
 
-                    // Pipline: fragment
-                    for (size_t i = 0; i < fragments_.size(); ++i)
-                    {
-                        Vector4i out = frag(fragments_[i]);
-                        render_buffer_[i * 3] = out[0];
-                        render_buffer_[i * 3 + 1] = out[1];
-                        render_buffer_[i * 3 + 2] = out[2];
+                        /* Pipline: barycentric cordination calculate + clip + depth test */
+                        fragments_.clear();
+                        fragments_.shrink_to_fit();
+                        fragments_ = std::vector<FragmentInput>(Settings::WIDTH * Settings::HEIGHT);
+                        std::fill(depth_buffer_, depth_buffer_ + Settings::WIDTH * Settings::HEIGHT, FLT_MAX);
+                        for (size_t i = 0; i < out_vertexes_.size(); i = i + 3)
+                        {
+                            for (size_t j = 0; j < 3; ++j)
+                            {
+                                pts[j] = out_vertexes_[i + j].POSITION;
+                                colors[j] = out_vertexes_[i + j].COLOR0;
+                                normals[j] = out_vertexes_[i + j].NORMAL;
+                            }
+                            interpolation(pts.get(), colors.get(), normals.get());
+                        }
+
+                        // Pipline: fragment
+                        for (size_t i = 0; i < fragments_.size(); ++i)
+                        {
+                            Vector4i out = frag(fragments_[i]);
+                            render_buffer_[i * 3] = out[0];
+                            render_buffer_[i * 3 + 1] = out[1];
+                            render_buffer_[i * 3 + 2] = out[2];
+                        }
+                        std::copy(render_buffer_, render_buffer_ + Settings::WIDTH * Settings::HEIGHT * 3, cc->get_render_buffer());
                     }
-                    std::copy(render_buffer_, render_buffer_ + Settings::WIDTH * Settings::HEIGHT * 3, cc->get_render_buffer());
                 }
             }
         }

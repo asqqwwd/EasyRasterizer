@@ -32,14 +32,15 @@ namespace Core
             entities_.clear();    // it will call destructor of each item in map
         }
 
-        void add_entity(Entity *entity)
+        Entity *add_entity(Entity *entity)
         {
             if (entities_.find(entity->id()) != entities_.end())
             {
                 std::clog << "[" << entity->id() + "] is existed" << std::endl;
-                return;
+                return entity;
             }
             entities_[entity->id()] = entity;
+            return entity;
             // entities_.insert(std::pair<std::string, Entity *>(entity->id(), entity));
         }
 
@@ -158,17 +159,14 @@ namespace Core
         {
             Scene *scene = new Scene("Default");
 
-            scene->add_entity(new Entity("HeadObj"));
-            scene->get_entity("HeadObj")->add_component(new MeshComponent())
-            ->load_vertexes("../obj/african_head.obj")
-            ->load_albedo_texture("../obj/african_head_diffuse.tga");
+            scene->add_entity(new Entity("HeadObj"))->add_component(new MeshComponent())->load_vertexes("../obj/helmet/helmet.obj")->load_albedo_texture("../obj/helmet/helmet_diffuse.tga");
 
-            scene->add_entity(new Core::Entity("MainCamera"));
-            Vector3f main_camera_pos{2, 0, 0};
-            scene->get_entity("MainCamera")->add_component(new CameraComponent(1.f, 10.f, 90.f, 90.f))
-            ->set_position(main_camera_pos);
-            scene->get_entity("MainCamera")->get_component<CameraComponent>()
-            ->lookat(-1 * main_camera_pos, Vector3f{0, 1, 0});
+            Vector3f main_camera_pos{0, 0, 2};
+            scene->add_entity(new Entity("MainCamera"))->add_component(new CameraComponent(1.f, 10.f, 90.f, 90.f))->set_position(main_camera_pos);
+            scene->get_entity("MainCamera")->get_component<CameraComponent>()->lookat(-1 * main_camera_pos, Vector3f{0, 1, 0});
+
+            Vector3f main_light_pos{2, 1, 5};
+            scene->add_entity(new Entity("MainLight"))->add_component(new LightComponent())->set_light_dir(main_light_pos - Vector3f{0, 0, 0})->set_intensity(30.f)->set_position(main_light_pos);
 
             return scene;
         }

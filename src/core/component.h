@@ -83,9 +83,10 @@ namespace Core
     private:
         std::vector<VertexInput> in_vertexes_;
         TGAImage albedo_;
+        float gloass_;
 
     public:
-        MeshComponent()
+        MeshComponent() : gloass_(2)
         {
         }
 
@@ -118,14 +119,19 @@ namespace Core
             return this;
         }
 
+        const std::vector<VertexInput> &get_all_vertexes()
+        {
+            return in_vertexes_;
+        }
+
         const TGAImage &get_albedo_texture()
         {
             return albedo_;
         }
 
-        std::vector<VertexInput> &get_all_vertexes()
+        float get_gloss()
         {
-            return in_vertexes_;
+            return gloass_;
         }
     };
 
@@ -152,7 +158,7 @@ namespace Core
 
         CameraComponent *lookat(const Vector3f &lookat_pos, const Vector3f &up)
         {
-            Vector3f gaze = const_cast<Vector3f &>(lookat_pos) - get_position();
+            Vector3f gaze = lookat_pos - get_position();
             Vector3f w = gaze.normal();
             Vector3f u = up.normal();
             Vector3f v = Utils::cross_product_3D(w, u).normal();
@@ -201,34 +207,56 @@ namespace Core
             TS[1][3] = screen[1] / 2;
             return TS;
         }
+
+        Vector3f get_lookat_dir(){
+            return Vector3f{R_model_[0][2],R_model_[1][2],R_model_[2][2]}.normal();
+        }
     };
 
     class LightComponent : public Component
     {
     private:
-        float intensity_;
+        Vector3f light_dir_;
+        float light_intensity_;
+        Vector3f light_color_;
+        Vector3f specular_color_;
+        Vector3f ambient_color_;
 
     public:
-        LightComponent() : intensity_(100.f)
+        LightComponent() : light_dir_(Vector3f{1.f, 0.f, 0.f}), light_intensity_(100.f), light_color_({1.f, 1.f, 1.f}), specular_color_({1.f, 1.f, 1.f}), ambient_color_({0.1f, 0.1f, 0.1f})
         {
         }
 
-        LightComponent *lookat(const Vector3f &lookat_pos, const Vector3f &up)
+        LightComponent *set_light_dir(const Vector3f &light_dir)
         {
-            Vector3f gaze = const_cast<Vector3f &>(lookat_pos) - get_position();
-            set_rotation(gaze, up);
+            light_dir_ = light_dir;
             return this;
         }
-
         LightComponent *set_intensity(float intensity)
         {
-            intensity_ = intensity;
+            light_intensity_ = intensity;
             return this;
         }
 
-        float get_intensity()
+        Vector3f get_light_dir()
         {
-            return intensity_;
+            return light_dir_.normal();
+        }
+        float get_light_intensity()
+        {
+            return light_intensity_;
+        }
+        Vector3f get_light_color()
+        {
+            return light_color_;
+        }
+        Vector3f get_specular_color()
+        {
+            return specular_color_;
+        }
+        Vector3f get_ambient_color()
+        {
+            return ambient_color_;
         }
     };
 }

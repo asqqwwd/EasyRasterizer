@@ -32,7 +32,7 @@ namespace Core
                 }
                 else
                 {
-                    data_[i] = *(il.begin() + i);  // call copy=
+                    data_[i] = *(il.begin() + i); // call copy=
                 }
             }
         }
@@ -124,11 +124,11 @@ namespace Core
                 ;
             return *this;
         }
-        inline Tensor operator+(const Tensor &vec)
+        inline Tensor operator+(const Tensor &vec) const
         {
             return Tensor(*this) += vec;
         }
-        inline Tensor operator+(float value)
+        inline Tensor operator+(float value) const
         {
             return Tensor(*this) += value;
         }
@@ -144,11 +144,11 @@ namespace Core
                 ;
             return *this;
         }
-        inline Tensor operator-(const Tensor &vec)
+        inline const Tensor operator-(const Tensor &vec) const
         {
             return Tensor(*this) -= vec;
         }
-        inline Tensor operator-(float value)
+        inline const Tensor operator-(float value) const
         {
             return Tensor(*this) -= value;
         }
@@ -164,11 +164,11 @@ namespace Core
                 ;
             return *this;
         }
-        inline Tensor operator*(const Tensor &vec)
+        inline Tensor operator*(const Tensor &vec) const
         {
             return Tensor(*this) *= vec;
         }
-        inline Tensor operator*(float value)
+        inline Tensor operator*(float value) const
         {
             return Tensor(*this) *= value;
         }
@@ -199,11 +199,11 @@ namespace Core
             }
             return *this;
         }
-        inline Tensor operator/(const Tensor &vec)
+        inline Tensor operator/(const Tensor &vec) const
         {
             return Tensor(*this) /= vec;
         }
-        inline Tensor operator/(float value)
+        inline Tensor operator/(float value) const
         {
             return Tensor(*this) /= value;
         }
@@ -307,7 +307,18 @@ namespace Core
             {
                 square_sum += data_[i] * data_[i];
             }
-            return Tensor(*this) / std::sqrt(square_sum);
+            return Tensor(*this) / l2norm();
+        }
+
+        template <typename U = T, typename = typename std::enable_if_t<std::is_arithmetic_v<U>>>
+        U l2norm() const
+        {
+            U square_sum = 0;
+            for (int i = M; i--;)
+            {
+                square_sum += data_[i] * data_[i];
+            }
+            return std::sqrt(square_sum);
         }
 
         static constexpr int size()
