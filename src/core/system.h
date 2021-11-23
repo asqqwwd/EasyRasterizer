@@ -52,7 +52,7 @@ namespace Core
             }
             return Vector3f{1.f - 1.f * (uv[0] + uv[1]) / uv[2], 1.f * uv[0] / uv[2], 1.f * uv[1] / uv[2]};
         }
-        void interpolation(Vector3f *pts, Vector3f *colors, Vector3f *normals)
+        void interpolation(Vector3f *pts, Vector3f *colors, Vector3f *normals, Vector3f *uvs)
         {
             /* Round down x and y of pts */
             Vector2i *pts_xy = new Vector2i[3];
@@ -69,6 +69,7 @@ namespace Core
             /* Padding color by barycentric coordinates */
             Vector3f interpolated_color;
             Vector3f interpolated_normal;
+            Vector3f interpolated_uv;
             for (int x = bbox_min[0]; x < bbox_max[0]; x++)
             {
                 for (int y = bbox_min[1]; y < bbox_max[1]; y++)
@@ -90,9 +91,11 @@ namespace Core
                     {
                         interpolated_color[i] = bc[0] * colors[0][i] + bc[1] * colors[1][i] + bc[2] * colors[2][i];
                         interpolated_normal[i] = bc[0] * normals[0][i] + bc[1] * normals[1][i] + bc[2] * normals[2][i];
+                        interpolated_uv[i] = bc[0] * uvs[0][i] + bc[1] * uvs[1][i] + bc[2] * uvs[2][i];
                     }
-                    fragments_[y * Settings::WIDTH + x].SV_NORMAL = interpolated_normal;
-                    fragments_[y * Settings::WIDTH + x].COLOR0 = interpolated_color;
+                    fragments_[y * Settings::WIDTH + x].IWS_NORMAL = interpolated_normal;
+                    fragments_[y * Settings::WIDTH + x].I_UV = interpolated_uv;
+                    fragments_[y * Settings::WIDTH + x].I_COLOR = interpolated_color;
                 }
             }
         }
@@ -109,6 +112,7 @@ namespace Core
             auto pts = std::make_unique<Vector3f[]>(3);
             auto colors = std::make_unique<Vector3f[]>(3);
             auto normals = std::make_unique<Vector3f[]>(3);
+            auto uvs = std::make_unique<Vector3f[]>(3);
             for (CameraComponent *cc : get_all_components<CameraComponent>())
             {
                 for (LightComponent *lc : get_all_components<LightComponent>())
@@ -118,7 +122,6 @@ namespace Core
                     attribute_.ViewPort = cc->getViewPort(Vector2i{Settings::WIDTH, Settings::HEIGHT});
 
                     attribute_.world_light_dir = lc->get_light_dir();
-                    attribute_.world_light_pos = lc->get_position();
                     attribute_.light_color = lc->get_light_color();
                     attribute_.light_intensity = lc->get_light_intensity();
 
@@ -138,7 +141,8 @@ namespace Core
                         out_vertexes_.clear(); // just move insert pointer to the start without deleting origin space
                         for (auto vi : mc->get_all_vertexes())
                         {
-                            out_vertexes_.push_back(vert(vi, attribute_, uniform_));
+                            // out_vertexes_.push_back(GouraudShader::vert(vi, attribute_, uniform_));
+                            out_vertexes_.push_back(PhongShader::vert(vi, attribute_, uniform_));
                         }
 
                         /* Pipline: barycentric cordination calculate + clip + depth test */
@@ -150,17 +154,19 @@ namespace Core
                         {
                             for (size_t j = 0; j < 3; ++j)
                             {
-                                pts[j] = out_vertexes_[i + j].POSITION;
-                                colors[j] = out_vertexes_[i + j].COLOR0;
-                                normals[j] = out_vertexes_[i + j].NORMAL;
+                                pts[j] = out_vertexes_[i + j].SS_POSITION;
+                                normals[j] = out_vertexes_[i + j].WS_NORMAL;
+                                uvs[j] = out_vertexes_[i + j].UV;
+                                colors[j] = out_vertexes_[i + j].COLOR;
                             }
-                            interpolation(pts.get(), colors.get(), normals.get());
+                            interpolation(pts.get(), colors.get(), normals.get(), uvs.get());
                         }
 
                         // Pipline: fragment
                         for (size_t i = 0; i < fragments_.size(); ++i)
                         {
-                            Vector4i out = frag(fragments_[i]);
+                            // Vector4i out = GouraudShader::frag(fragments_[i], attribute_, uniform_);
+                            Vector4i out = PhongShader::frag(fragments_[i], attribute_, uniform_);
                             render_buffer_[i * 3] = out[0];
                             render_buffer_[i * 3 + 1] = out[1];
                             render_buffer_[i * 3 + 2] = out[2];

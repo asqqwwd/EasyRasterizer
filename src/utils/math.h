@@ -24,6 +24,13 @@ namespace Utils
     {
         return value > 1 ? 1 : (value < 0 ? 0 : value);
     }
+
+    template <typename T>
+    T lerp(const T &a, const T &b, float value)
+    {
+        assert(value >= 0 && value <= 1);
+        return value * a + (1 - value) * b;
+    }
 }
 
 #endif // ERER_UTILS_MATH_H_

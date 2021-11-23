@@ -166,7 +166,7 @@ namespace Core
             scene->get_entity("MainCamera")->get_component<CameraComponent>()->lookat(-1 * main_camera_pos, Vector3f{0, 1, 0});
 
             Vector3f main_light_pos{2, 1, 5};
-            scene->add_entity(new Entity("MainLight"))->add_component(new LightComponent())->set_light_dir(main_light_pos - Vector3f{0, 0, 0})->set_intensity(30.f)->set_position(main_light_pos);
+            scene->add_entity(new Entity("MainLight"))->add_component(new LightComponent())->set_light_dir(main_light_pos - Vector3f{0, 0, 0})->set_intensity(1.f)->set_position(main_light_pos);
 
             return scene;
         }

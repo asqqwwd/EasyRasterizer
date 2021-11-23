@@ -103,9 +103,9 @@ namespace Core
             {
                 for (size_t i = 0; i < 3; ++i)
                 {
-                    tmp.POSITION = positions[f[0][i]];
-                    tmp.TEXCOORD0 = uvs[f[1][i]];
-                    tmp.NORMAL = normals[f[2][i]];
+                    tmp.MS_POSITION = positions[f[0][i]];
+                    tmp.UV = uvs[f[1][i]];
+                    tmp.MS_NORMAL = normals[f[2][i]];
                     in_vertexes_.push_back(tmp);
                 }
             }
@@ -208,8 +208,9 @@ namespace Core
             return TS;
         }
 
-        Vector3f get_lookat_dir(){
-            return Vector3f{R_model_[0][2],R_model_[1][2],R_model_[2][2]}.normal();
+        Vector3f get_lookat_dir()
+        {
+            return Vector3f{R_model_[0][2], R_model_[1][2], R_model_[2][2]}.normal();
         }
     };
 

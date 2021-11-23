@@ -56,7 +56,7 @@ int main(int argc, char **argv)
     game_init();
 
     glutDisplayFunc(display);
-    // glutIdleFunc(display); // force flush when idle
+    glutIdleFunc(display); // force flush when idle
     glutMainLoop();        // main loop
 
     return 0;

@@ -16,7 +16,6 @@ namespace Core
 
         // For diffuse color cal
         Vector3f world_light_dir;
-        Vector3f world_light_pos;
         Vector3f light_color; // range of color is 0-1(0-255)
         float light_intensity;
 
@@ -36,24 +35,26 @@ namespace Core
 
     struct VertexInput
     {
-        Vector3f POSITION;
-        Vector3f NORMAL;
-        Vector3f TEXCOORD0;
+        Vector3f MS_POSITION; // model space postion
+        Vector3f MS_NORMAL;   // model space normal
+        Vector3f UV;
     }; // vertex stage inputs
 
     struct VertexOutput
     {
-        Vector3f POSITION;
-        Vector3f NORMAL;
-        Vector3f COLOR0;
+        Vector3f SS_POSITION; // screen space postion
+        Vector3f WS_NORMAL;   // world space normal
+        Vector3f UV;
+        Vector3f COLOR;
     }; // vertex stage outputs
 
     struct FragmentInput
     {
-        // Vector2i SV_POSITION;
-        Vector3f SV_NORMAL;
-        Vector3f COLOR0;
-    }; // frag stage inputs
+        // Vector3f ISS_POSITION; // interpolation  screen space postion
+        Vector3f IWS_NORMAL; // interpolation world space normal
+        Vector3f I_UV;
+        Vector3f I_COLOR; // interpolation color
+    };                    // frag stage inputs
 
     Vector3f sampling(const TGAImage &img, const Vector3f &uv)
     {
@@ -61,31 +62,58 @@ namespace Core
         return Vector3f{tmp[0] / 255.f, tmp[1] / 255.f, tmp[2] / 255.f}; // bgr->bgr
     }
 
-    VertexOutput vert(const VertexInput &vi, const Attribute &attribute, const Uniform &uniform)
+    namespace GouraudShader
     {
-        VertexOutput vo;
-        Vector4f tmp = attribute.ViewPort.mul(attribute.P.mul(attribute.V.mul(attribute.M.mul(vi.POSITION.reshape<4>(1)))));
-        tmp = tmp / tmp[3];
-        vo.POSITION = tmp.reshape<3>();
-        // vo.COLOR0 = Vector3i{static_cast<int>(vi.TEXCOORD0[0] * 255), static_cast<int>(vi.TEXCOORD0[1] * 255), static_cast<int>(vi.TEXCOORD0[2] * 255)};
+        VertexOutput vert(const VertexInput &vi, const Attribute &attribute, const Uniform &uniform)
+        {
+            VertexOutput vo;
+            Vector4f tmp = attribute.ViewPort.mul(attribute.P.mul(attribute.V.mul(attribute.M.mul(vi.MS_POSITION.reshape<4>(1)))));
+            tmp = tmp / tmp[3];
+            vo.SS_POSITION = tmp.reshape<3>();
+            // vo.COLOR0 = Vector3i{static_cast<int>(vi.TEXCOORD0[0] * 255), static_cast<int>(vi.TEXCOORD0[1] * 255), static_cast<int>(vi.TEXCOORD0[2] * 255)};
 
-        Vector3f world_normal = attribute.M.mul(vi.NORMAL.reshape<4>(0)).reshape<3>().normal();
-        Vector3f world_pos = attribute.M.mul(vi.POSITION.reshape<4>(1)).reshape<3>();
-        Vector3f world_half_dir = (attribute.world_light_dir + attribute.world_view_dir).normal();
-        float decayed_light_intensity = attribute.light_intensity / std::pow((attribute.world_light_pos - world_pos).l2norm(), 2);
-        Vector3f diffuse = attribute.light_color * sampling(uniform.albedo, vi.TEXCOORD0) * decayed_light_intensity * std::max(0.f, Utils::dot_product_3D(world_normal, attribute.world_light_dir));
-        Vector3f specular = attribute.light_color * attribute.specular_color * decayed_light_intensity * std::pow(std::max(0.f, Utils::dot_product_3D(world_normal, world_half_dir)), uniform.gloss);
-        vo.COLOR0 = diffuse + attribute.ambient + specular;
-        // vo.COLOR0 = specular;
-        return vo;
+            Vector3f world_normal = attribute.M.mul(vi.MS_NORMAL.reshape<4>(0)).reshape<3>().normal();
+            Vector3f world_half_dir = (attribute.world_light_dir + attribute.world_view_dir).normal();
+            Vector3f diffuse = attribute.light_color * sampling(uniform.albedo, vi.UV) * attribute.light_intensity * std::max(0.f, Utils::dot_product_3D(world_normal, attribute.world_light_dir));
+            Vector3f specular = attribute.light_color * attribute.specular_color * attribute.light_intensity * std::pow(std::max(0.f, Utils::dot_product_3D(world_normal, world_half_dir)), uniform.gloss);
+            vo.COLOR = diffuse + attribute.ambient + specular;
+            return vo;
+        }
+
+        Vector4i frag(FragmentInput fi, const Attribute &attribute, const Uniform &uniform)
+        {
+            return Vector4i{static_cast<int>(Utils::saturate(fi.I_COLOR[0]) * 255),
+                            static_cast<int>(Utils::saturate(fi.I_COLOR[1]) * 255),
+                            static_cast<int>(Utils::saturate(fi.I_COLOR[2]) * 255),
+                            0};
+        }
     }
 
-    Vector4i frag(FragmentInput i)
+    namespace PhongShader
     {
-        return Vector4i{static_cast<int>(Utils::saturate(i.COLOR0[0]) * 255),
-                        static_cast<int>(Utils::saturate(i.COLOR0[1]) * 255),
-                        static_cast<int>(Utils::saturate(i.COLOR0[2]) * 255),
-                        0};
+        VertexOutput vert(const VertexInput &vi, const Attribute &attribute, const Uniform &uniform)
+        {
+            VertexOutput vo;
+            Vector4f tmp = attribute.ViewPort.mul(attribute.P.mul(attribute.V.mul(attribute.M.mul(vi.MS_POSITION.reshape<4>(1)))));
+            tmp = tmp / tmp[3];
+            vo.SS_POSITION = tmp.reshape<3>();
+            vo.WS_NORMAL = attribute.M.mul(vi.MS_NORMAL.reshape<4>(0)).reshape<3>().normal();
+            vo.UV = vi.UV;
+
+            return vo;
+        }
+
+        Vector4i frag(FragmentInput fi, const Attribute &attribute, const Uniform &uniform)
+        {
+            Vector3f world_half_dir = (attribute.world_light_dir + attribute.world_view_dir).normal();
+            Vector3f diffuse = attribute.light_color * sampling(uniform.albedo, fi.I_UV) * attribute.light_intensity * std::max(0.f, Utils::dot_product_3D(fi.IWS_NORMAL, attribute.world_light_dir));
+            Vector3f specular = attribute.light_color * attribute.specular_color * attribute.light_intensity * std::pow(std::max(0.f, Utils::dot_product_3D(fi.IWS_NORMAL, world_half_dir)), uniform.gloss);
+            Vector3f tmp = diffuse + attribute.ambient + specular;
+            return Vector4i{static_cast<int>(Utils::saturate(tmp[0]) * 255),
+                            static_cast<int>(Utils::saturate(tmp[1]) * 255),
+                            static_cast<int>(Utils::saturate(tmp[2]) * 255),
+                            0};
+        }
     }
 
 }
