@@ -7,8 +7,8 @@ namespace Core
     class Time
     {
     private:
-        static std::chrono::_V2::system_clock::time_point current_frame_time_;
-        static std::chrono::_V2::system_clock::time_point last_frame_time_;
+        static std::chrono::system_clock::time_point current_frame_time_;
+        static std::chrono::system_clock::time_point last_frame_time_;
 
     public:
         static void clock()
@@ -24,8 +24,8 @@ namespace Core
         }
     };
 
-    std::chrono::_V2::system_clock::time_point Time::current_frame_time_ = std::chrono::system_clock::now();
-    std::chrono::_V2::system_clock::time_point Time::last_frame_time_ = std::chrono::system_clock::now();
+    std::chrono::system_clock::time_point Time::current_frame_time_ = std::chrono::system_clock::now();
+    std::chrono::system_clock::time_point Time::last_frame_time_ = std::chrono::system_clock::now();
 }
 
 #endif // ERER_CORE_TIME_H_

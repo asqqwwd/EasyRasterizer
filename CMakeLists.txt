@@ -51,7 +51,15 @@ ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
     target_link_libraries(ERer freeglut.lib)  # g++ -l
     # windows上的动态库加载路径不能使用-Wl,-rpath指定。
     # 解决方法：1.直接将dll放在与exe同一目录下即可 2.dll路径加入PATH
-    file(COPY ${CMAKE_SOURCE_DIR}/3rdparty/lib/freeglut.dll DESTINATION ${CMAKE_BINARY_DIR}/Release/)
+    if (CMAKE_BUILD_TYPE MATCHES "Debug" OR CMAKE_BUILD_TYPE EQUAL "None" OR NOT CMAKE_BUILD_TYPE)
+        message(STATUS "***** CMAKE_BUILD_TYPE is Debug")
+        file(COPY ${CMAKE_SOURCE_DIR}/3rdparty/lib/freeglut.dll DESTINATION ${CMAKE_BINARY_DIR}/Debug/)
+    elseif (CMAKE_BUILD_TYPE MATCHES "Release")
+        message(STATUS "***** CMAKE_BUILD_TYPE is Release")
+        file(COPY ${CMAKE_SOURCE_DIR}/3rdparty/lib/freeglut.dll DESTINATION ${CMAKE_BINARY_DIR}/Release/)
+    else ()
+        message(STATUS "***** unknown CMAKE_BUILD_TYPE = " ${CMAKE_BUILD_TYPE})
+    endif ()
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 if (Is_Include_OpenCV)

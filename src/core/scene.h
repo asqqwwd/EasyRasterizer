@@ -159,14 +159,36 @@ namespace Core
         {
             Scene *scene = new Scene("Default");
 
-            scene->add_entity(new Entity("HeadObj"))->add_component(new MeshComponent())->load_vertexes("../obj/helmet/helmet.obj")->load_albedo_texture("../obj/helmet/helmet_diffuse.tga");
+            scene
+                ->add_entity(new Entity("HelmetObj"))                        //
+                ->add_component(new MeshComponent())                         //
+                ->load_vertexes("../../obj/helmet/helmet.obj")               //
+                ->load_albedo_texture("../../obj/helmet/helmet_diffuse.tga") //
+                ->set_scala(Vector3f{0.8, 0.8, 0.8})                         //
+                ->set_position(Vector3f{0, 0, 0});                           //
 
-            Vector3f main_camera_pos{0, 0, 2};
-            scene->add_entity(new Entity("MainCamera"))->add_component(new CameraComponent(1.f, 10.f, 90.f, 90.f))->set_position(main_camera_pos);
-            scene->get_entity("MainCamera")->get_component<CameraComponent>()->lookat(-1 * main_camera_pos, Vector3f{0, 1, 0});
+            scene
+                ->add_entity(new Entity("FloorObj"))                       //
+                ->add_component(new MeshComponent())                       //
+                ->load_vertexes("../../obj/floor/floor.obj")               //
+                ->load_albedo_texture("../../obj/floor/floor_diffuse.tga") //
+                ->set_scala(Vector3f{3, 3, 3})                             //
+                ->set_position(Vector3f{0, 0, 0});                         //
 
-            Vector3f main_light_pos{2, 1, 5};
-            scene->add_entity(new Entity("MainLight"))->add_component(new LightComponent())->set_light_dir(main_light_pos - Vector3f{0, 0, 0})->set_intensity(1.f)->set_position(main_light_pos);
+            Vector3f main_camera_pos{0, 1.f, 2.f};
+            scene
+                ->add_entity(new Entity("MainCamera"))                      //
+                ->add_component(new CameraComponent())                      //
+                ->lookat_with_fixed_up(Vector3f{0, 0, 0} - main_camera_pos) //
+                ->set_position(main_camera_pos);                            //
+
+            Vector3f main_light_pos{4, 4, 4};
+            scene
+                ->add_entity(new Entity("MainLight"))               //
+                ->add_component(new LightComponent())               //
+                ->set_light_dir(Vector3f{0, 0, 0} - main_light_pos) //
+                ->set_intensity(1.0f)                               //
+                ->set_position(main_light_pos);                     //
 
             return scene;
         }

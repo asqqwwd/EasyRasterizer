@@ -35,11 +35,6 @@ namespace Core
         {
             T_model_[0][3] = pos[0];
             T_model_[1][3] = pos[1];
-            float far_;
-            float vertical_angle_of_view_;
-            float horizontal_angle_of_view_;
-
-            Matrix4f R_view_;
             T_model_[2][3] = pos[2];
             return this;
         }
@@ -86,7 +81,7 @@ namespace Core
         float gloass_;
 
     public:
-        MeshComponent() : gloass_(2)
+        MeshComponent() : gloass_(10)
         {
         }
 
@@ -147,18 +142,20 @@ namespace Core
 
         Matrix4f R_view_;
         Matrix4f T_view_;
-        Matrix4f M_persp_;
+        Matrix4f M_persp2ortho_;
+        Matrix4f M_ortho_;
 
     public:
-        CameraComponent(float near = 0.1, float far = 100, float vertical_angle_of_view = 120, float horizontal_angle_of_view = 60)
-            : render_buffer_(new unsigned char[Settings::WIDTH * Settings::HEIGHT * 3]), near_(near), far_(far), vertical_angle_of_view_(vertical_angle_of_view), horizontal_angle_of_view_(horizontal_angle_of_view)
+        CameraComponent(float near_sp = 0.1f, float far_sp = 10.f, float vertical_angle_of_view = 90.f, float horizontal_angle_of_view = 90.f)
+            : render_buffer_(new unsigned char[Settings::WIDTH * Settings::HEIGHT * 3]), near_(near_sp), far_(far_sp), vertical_angle_of_view_(vertical_angle_of_view), horizontal_angle_of_view_(horizontal_angle_of_view)
         {
-            M_persp_ = Matrix4f{{near_, 0, 0, 0}, {0, near_, 0, 0}, {0, 0, near_ + far_, -near_ * far_}, {0, 0, 1, 0}};
+            // near/far is keyword in the windows system! near_sp/far_sp is a substitute for near/far
+            M_persp2ortho_ = Matrix4f{{near_, 0, 0, 0}, {0, near_, 0, 0}, {0, 0, near_ + far_, -near_ * far_}, {0, 0, 1, 0}};
+            M_ortho_ = Matrix4f{{static_cast<float>(1 / (near_ * std::tan(horizontal_angle_of_view_ / 360 * PI))), 0, 0, 0}, {0, static_cast<float>(1 / (near_ * std::tan(vertical_angle_of_view_ / 360 * PI))), 0, 0}, {0, 0, 2 / (far_ - near_), -(near_ + far_) / (far_ - near_)}, {0, 0, 0, 1}};
         }
 
-        CameraComponent *lookat(const Vector3f &lookat_pos, const Vector3f &up)
+        CameraComponent *lookat(const Vector3f &gaze, const Vector3f &up)
         {
-            Vector3f gaze = lookat_pos - get_position();
             Vector3f w = gaze.normal();
             Vector3f u = up.normal();
             Vector3f v = Utils::cross_product_3D(w, u).normal();
@@ -169,6 +166,34 @@ namespace Core
                 R_model_[i][2] = w[i]; // z->gaze
             }
             R_view_ = R_model_.transpose();
+            T_view_ = T_model_;
+            T_view_[0][3] *= -1;
+            T_view_[1][3] *= -1;
+            T_view_[2][3] *= -1;
+            return this;
+        }
+
+        CameraComponent *lookat_with_fixed_up(const Vector3f &gaze)
+        {
+            Vector3f w = gaze.normal();
+            Vector3f v = Vector3f{-w[2], 0, w[0]}.normal();
+            Vector3f u = Utils::cross_product_3D(v, w).normal();
+            for (int i = 0; i < 3; ++i)
+            {
+                R_model_[i][0] = v[i]; // x->cross(gaze,up)
+                R_model_[i][1] = u[i]; // y->up
+                R_model_[i][2] = w[i]; // z->gaze
+            }
+            R_view_ = R_model_.transpose();
+            return this;
+        }
+
+        // redifine instead of overload or override
+        CameraComponent *set_position(const Vector3f &pos)
+        {
+            T_model_[0][3] = pos[0];
+            T_model_[1][3] = pos[1];
+            T_model_[2][3] = pos[2];
             T_view_ = T_model_;
             T_view_[0][3] *= -1;
             T_view_[1][3] *= -1;
@@ -188,29 +213,32 @@ namespace Core
 
         Matrix4f getP()
         {
-            return M_persp_;
+            return M_ortho_.mul(M_persp2ortho_);
         }
 
         Matrix4f getVP()
         {
-            return M_persp_.mul(R_view_.mul(T_view_));
+            return M_ortho_.mul(M_persp2ortho_.mul(R_view_.mul(T_view_)));
         }
 
         Matrix4f getViewPort(const Vector2i &screen)
         {
-            Matrix4f TS = indentity<float, 4>();
-            float f1 = static_cast<float>(screen[0] / (2 * near_ * std::tan(horizontal_angle_of_view_ / 360 * PI)));
-            float f2 = static_cast<float>(screen[1] / (2 * near_ * std::tan(vertical_angle_of_view_ / 360 * PI)));
-            TS[0][0] = f1;
-            TS[1][1] = f2;
-            TS[0][3] = screen[0] / 2;
-            TS[1][3] = screen[1] / 2;
-            return TS;
+            return Matrix4f{{screen[0] / 2.f, 0, 0, screen[0] / 2.f}, {0, screen[1] / 2.f, 0, screen[1] / 2.f}, {0, 0, 1 / 2.f, 1 / 2.f}, {0, 0, 0, 1}};
         }
 
         Vector3f get_lookat_dir()
         {
             return Vector3f{R_model_[0][2], R_model_[1][2], R_model_[2][2]}.normal();
+        }
+
+        float get_near()
+        {
+            return near_;
+        }
+
+        float get_far()
+        {
+            return far_;
         }
     };
 
@@ -224,7 +252,7 @@ namespace Core
         Vector3f ambient_color_;
 
     public:
-        LightComponent() : light_dir_(Vector3f{1.f, 0.f, 0.f}), light_intensity_(100.f), light_color_({1.f, 1.f, 1.f}), specular_color_({1.f, 1.f, 1.f}), ambient_color_({0.1f, 0.1f, 0.1f})
+        LightComponent() : light_dir_(Vector3f{1.f, 0.f, 0.f}), light_intensity_(10.f), light_color_({1.f, 1.f, 1.f}), specular_color_({1.f, 1.f, 1.f}), ambient_color_({0.1f, 0.1f, 0.1f})
         {
         }
 

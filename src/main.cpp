@@ -18,6 +18,9 @@
 #include "core/entity.h"
 #include "core/component.h"
 #include "core/time.h"
+#include "utils/loader.h"
+
+#include <typeinfo>
 
 using namespace std;
 
@@ -28,6 +31,9 @@ void display(void)
     {
         sys->update();
     }
+
+    // Utils::save_tga_image("../../img.tga", Settings::WIDTH, Settings::HEIGHT, 3, Core::get_entity("MainCamera")->get_component<Core::CameraComponent>()->get_render_buffer());
+    // exit(1);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDrawPixels(Settings::WIDTH, Settings::HEIGHT, GL_BGR_EXT, GL_UNSIGNED_BYTE, Core::get_entity("MainCamera")->get_component<Core::CameraComponent>()->get_render_buffer());
@@ -46,7 +52,7 @@ void window_init(int argc, char **argv)
 void game_init()
 {
     new Core::RasterizeSystem();
-    new Core::MotionSystem();
+    // new Core::MotionSystem();
     Core::cd_to_scene(Core::SceneFactory::build_default_scene());
 }
 
@@ -56,8 +62,8 @@ int main(int argc, char **argv)
     game_init();
 
     glutDisplayFunc(display);
-    glutIdleFunc(display); // force flush when idle
-    glutMainLoop();        // main loop
+    // glutIdleFunc(display); // force flush when idle
+    glutMainLoop(); // main loop
 
     return 0;
 }

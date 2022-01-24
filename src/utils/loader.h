@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include "../core/data_structure.hpp"
+#include "../core/tgaimage.h"
 
 namespace Utils
 {
@@ -43,12 +44,13 @@ namespace Utils
             }
             else if (!line.compare(0, 3, "vt "))
             {
-                iss >> trash >> trash; // read {vt } in {vt 0.1 0.2 0} to trash, stopping while encounter space charactor
+                iss >> trash >> trash; // read {vt } in {vt 0.1 0.2} to trash, stopping while encounter space charactor
                 for (int i = 0; i < 2; i++)
                 {
                     iss >> value;
-                    v[i] = value - static_cast<int>(value);
+                    v[i] = value > 1 ? value - static_cast<int>(value) : value; // vt>1 -> 0<vt<1, taking care value=1.f
                 }
+                v[2] = 0;
                 uvs_p->push_back(v);
             }
             else if (!line.compare(0, 3, "vn "))
@@ -76,6 +78,13 @@ namespace Utils
                 faces_p->push_back(m);
             }
         }
+    }
+
+    void save_tga_image(std::string filename, size_t w, size_t h, size_t bpp, uint8_t *data)
+    {
+        Core::TGAImage img;
+        img.write_data(w, h, bpp, data);
+        img.write_tga_file(filename);
     }
 }
 

@@ -84,6 +84,7 @@ namespace Core
         int get_bytespp();
         std::uint8_t *buffer();
         void clear();
+        void write_data(const int w, const int h, const int bpp,uint8_t *data);
     };
 }
 

@@ -361,4 +361,16 @@ namespace Core
         width_ = w;
         height_ = h;
     }
+
+    void TGAImage::write_data(const int w, const int h, const int bpp, uint8_t *data)
+    {
+        data_.clear();
+        data_.shrink_to_fit();
+        data_ = std::vector<uint8_t>(w * h * bpp, 0);
+        width_ = w;
+        height_ = h;
+        bytespp_ = bpp;
+        memcpy(data_.data(), data, w * h * bpp);
+    }
+
 }
