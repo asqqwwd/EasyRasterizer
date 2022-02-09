@@ -8,7 +8,8 @@
 #include <vector>
 #include <string>
 #include "../core/data_structure.hpp"
-#include "../core/tgaimage.h"
+#include "../core/image.h"
+#include "./utils/tgaimage.h"
 
 namespace Utils
 {
@@ -48,7 +49,7 @@ namespace Utils
                 for (int i = 0; i < 2; i++)
                 {
                     iss >> value;
-                    v[i] = value > 1 ? value - static_cast<int>(value) : value; // vt>1 -> 0<vt<1, taking care value=1.f
+                    v[i] = value;
                 }
                 v[2] = 0;
                 uvs_p->push_back(v);
@@ -78,13 +79,6 @@ namespace Utils
                 faces_p->push_back(m);
             }
         }
-    }
-
-    void save_tga_image(std::string filename, size_t w, size_t h, size_t bpp, uint8_t *data)
-    {
-        Core::TGAImage img;
-        img.write_data(w, h, bpp, data);
-        img.write_tga_file(filename);
     }
 }
 

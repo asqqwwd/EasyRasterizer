@@ -8,6 +8,8 @@
 
 #include "entity.h"
 #include "component.h"
+#include "../utils/convert.h"
+#include "../utils/tgaimage.h"
 
 namespace Core
 {
@@ -159,21 +161,25 @@ namespace Core
         {
             Scene *scene = new Scene("Default");
 
+            Utils::TGAImage helmet_obj_albedo_tga_image;
+            helmet_obj_albedo_tga_image.read_tga_file("../../obj/helmet/helmet_diffuse.tga");
             scene
-                ->add_entity(new Entity("HelmetObj"))                        //
-                ->add_component(new MeshComponent())                         //
-                ->load_vertexes("../../obj/helmet/helmet.obj")               //
-                ->load_albedo_texture("../../obj/helmet/helmet_diffuse.tga") //
-                ->set_scala(Vector3f{0.8, 0.8, 0.8})                         //
-                ->set_position(Vector3f{0, 0, 0});                           //
+                ->add_entity(new Entity("HelmetObj"))                                                   //
+                ->add_component(new MeshComponent())                                                    //
+                ->load_vertexes("../../obj/helmet/helmet.obj")                                          //
+                ->set_albedo_texture(Utils::convert_TGAImage_to_CoreImage(helmet_obj_albedo_tga_image)) //
+                ->set_scala(Vector3f{0.8, 0.8, 0.8})                                                    //
+                ->set_position(Vector3f{0, 0, 0});                                                      //
 
+            Utils::TGAImage floor_obj_albedo_tga_image;
+            floor_obj_albedo_tga_image.read_tga_file("../../obj/floor/floor_diffuse.tga");
             scene
-                ->add_entity(new Entity("FloorObj"))                       //
-                ->add_component(new MeshComponent())                       //
-                ->load_vertexes("../../obj/floor/floor.obj")               //
-                ->load_albedo_texture("../../obj/floor/floor_diffuse.tga") //
-                ->set_scala(Vector3f{3, 3, 3})                             //
-                ->set_position(Vector3f{0, 0, 0});                         //
+                ->add_entity(new Entity("FloorObj"))                                                   //
+                ->add_component(new MeshComponent())                                                   //
+                ->load_vertexes("../../obj/floor/floor.obj")                                           //
+                ->set_albedo_texture(Utils::convert_TGAImage_to_CoreImage(floor_obj_albedo_tga_image)) //
+                ->set_scala(Vector3f{3, 3, 3})                                                         //
+                ->set_position(Vector3f{0, 0, 0});                                                     //
 
             Vector3f main_camera_pos{0, 1.f, 2.f};
             scene

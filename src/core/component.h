@@ -9,7 +9,7 @@
 
 #include "data_structure.hpp"
 #include "shader.h"
-#include "tgaimage.h"
+#include "image.h"
 #include "../utils/loader.h"
 #include "../utils/math.h"
 #include "../settings.h"
@@ -50,7 +50,7 @@ namespace Core
             Vector3f w = x.normal();
             Vector3f u = y.normal();
             Vector3f v = Utils::cross_product_3D(w, u).normal();
-            for (size_t i = 0; i < 3; ++i)
+            for (int i = 0; i < 3; ++i)
             {
                 R_model_[i][0] = w[i]; // x->x
                 R_model_[i][1] = u[i]; // y->y
@@ -77,7 +77,7 @@ namespace Core
     {
     private:
         std::vector<VertexInput> in_vertexes_;
-        TGAImage albedo_;
+        Image<Vector4c> albedo_;
         float gloass_;
 
     public:
@@ -96,7 +96,7 @@ namespace Core
             VertexInput tmp;
             for (auto f : faces)
             {
-                for (size_t i = 0; i < 3; ++i)
+                for (int i = 0; i < 3; ++i)
                 {
                     tmp.MS_POSITION = positions[f[0][i]];
                     tmp.UV = uvs[f[1][i]];
@@ -108,9 +108,9 @@ namespace Core
             return this;
         }
 
-        MeshComponent *load_albedo_texture(const std::string &filename)
+        MeshComponent *set_albedo_texture(const Image<Vector4c>& img)
         {
-            albedo_.read_tga_file(filename);
+            albedo_ = img;
             return this;
         }
 
@@ -119,7 +119,7 @@ namespace Core
             return in_vertexes_;
         }
 
-        const TGAImage &get_albedo_texture()
+        const Image<Vector4c> &get_albedo_texture()
         {
             return albedo_;
         }
@@ -133,7 +133,7 @@ namespace Core
     class CameraComponent : public Component
     {
     private:
-        unsigned char *render_buffer_;
+        uint8_t *render_buffer_;
 
         float near_;
         float far_;
@@ -147,7 +147,7 @@ namespace Core
 
     public:
         CameraComponent(float near_sp = 0.1f, float far_sp = 10.f, float vertical_angle_of_view = 90.f, float horizontal_angle_of_view = 90.f)
-            : render_buffer_(new unsigned char[Settings::WIDTH * Settings::HEIGHT * 3]), near_(near_sp), far_(far_sp), vertical_angle_of_view_(vertical_angle_of_view), horizontal_angle_of_view_(horizontal_angle_of_view)
+            : render_buffer_(new uint8_t[Settings::WIDTH * Settings::HEIGHT * 3]), near_(near_sp), far_(far_sp), vertical_angle_of_view_(vertical_angle_of_view), horizontal_angle_of_view_(horizontal_angle_of_view)
         {
             // near/far is keyword in the windows system! near_sp/far_sp is a substitute for near/far
             M_persp2ortho_ = Matrix4f{{near_, 0, 0, 0}, {0, near_, 0, 0}, {0, 0, near_ + far_, -near_ * far_}, {0, 0, 1, 0}};
@@ -180,15 +180,15 @@ namespace Core
             Vector3f u = Utils::cross_product_3D(v, w).normal();
             for (int i = 0; i < 3; ++i)
             {
-                R_model_[i][0] = v[i]; // x->cross(gaze,up)
-                R_model_[i][1] = u[i]; // y->up
+                R_model_[i][0] = v[i]; // x->gaze's horizontal orthogonal vector(hov)
+                R_model_[i][1] = u[i]; // y->cross(hov,gaze)
                 R_model_[i][2] = w[i]; // z->gaze
             }
             R_view_ = R_model_.transpose();
             return this;
         }
 
-        // redifine instead of overload or override
+        // override function due to covariant return type
         CameraComponent *set_position(const Vector3f &pos)
         {
             T_model_[0][3] = pos[0];
@@ -201,7 +201,7 @@ namespace Core
             return this;
         }
 
-        unsigned char *get_render_buffer()
+        uint8_t *get_render_buffer()
         {
             return render_buffer_;
         }

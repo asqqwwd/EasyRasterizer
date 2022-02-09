@@ -1,11 +1,11 @@
-#ifndef ERER_CORE_TGAIMAGE_H_
-#define ERER_CORE_TGAIMAGE_H_
+#ifndef ERER_UTILS_TGAIMAGE_H_
+#define ERER_UTILS_TGAIMAGE_H_
 
 #include <cstdint>
 #include <fstream>
 #include <vector>
 
-namespace Core
+namespace Utils
 {
 #pragma pack(push, 1)
     struct TGA_Header
@@ -84,8 +84,8 @@ namespace Core
         int get_bytespp();
         std::uint8_t *buffer();
         void clear();
-        void write_data(const int w, const int h, const int bpp,uint8_t *data);
+        void write_data(const int w, const int h, const int bpp, uint8_t *data);
     };
 }
 
-#endif //  ERER_CORE_TGAIMAGE_H_
+#endif //  ERER_UTILS_TGAIMAGE_H_

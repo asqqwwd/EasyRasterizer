@@ -36,8 +36,9 @@ namespace Core
     private:
         // std::vector<VertexOutput> out_vertexes_;
         // std::vector<FragmentInput> fragments_;
-        float *depth_buffer_;          // assuming that all depth is larger than 0
-        unsigned char *render_buffer_; // width*height*3, data format: bgr bgr ...
+        Image<float> depth_buffer_; // assuming that all depth is larger than 0
+        Image<float> shadow_map_;
+        uint8_t *render_buffer_; // width*height*3, data format: bgr bgr ...
 
         Vector3f get_barycentric_by_vector(const Vector2i pts[3], const Vector2i &pt)
         {
@@ -49,11 +50,23 @@ namespace Core
             return Vector3f{1.f - 1.f * (uv[0] + uv[1]) / uv[2], 1.f * uv[0] / uv[2], 1.f * uv[1] / uv[2]};
         }
 
+        float HS(const Vector4f &WS_pos, const Matrix4f &V, const Matrix4f &P, const Matrix4f &ViewPort)
+        {
+            Vector4f NDC_pos = P.mul(V.mul(WS_pos));
+            float view_space_depth = NDC_pos[3];
+            NDC_pos = NDC_pos / NDC_pos[3];
+            float u = (NDC_pos[0] + 1) / 2;
+            float v = (NDC_pos[1] + 1) / 2;
+            float first_depth = shadow_map_.sampling(u, v);
+            return (view_space_depth - first_depth > 0.05f) ? 0.f : 1.f;
+        }
+
     public:
         RasterizeSystem() : System(this)
         {
-            depth_buffer_ = new float[Settings::WIDTH * Settings::HEIGHT]{};              // padding with zeros
-            render_buffer_ = new unsigned char[Settings::WIDTH * Settings::HEIGHT * 3]{}; // padding with zeros
+            render_buffer_ = new uint8_t[Settings::WIDTH * Settings::HEIGHT * 3]{}; // padding with zeros
+            depth_buffer_ = Image<float>(Settings::WIDTH, Settings::HEIGHT);
+            shadow_map_ = Image<float>(Settings::WIDTH, Settings::HEIGHT);
         }
 
         void update()
@@ -71,8 +84,7 @@ namespace Core
             attribute.V = main_light_camera->getV();
             attribute.P = main_light_camera->getP();
             M_view_port = main_light_camera->getViewPort(Vector2i{Settings::WIDTH, Settings::HEIGHT});
-            float *shadow_map = new float[Settings::WIDTH * Settings::HEIGHT]{};
-            std::fill(shadow_map, shadow_map + Settings::WIDTH * Settings::HEIGHT, main_light_camera->get_far());
+            shadow_map_.memset(main_light_camera->get_far());
             for (MeshComponent *mc : get_all_components<MeshComponent>())
             {
                 attribute.M = mc->getM();
@@ -115,21 +127,16 @@ namespace Core
                             // Depth interpolate and test
                             Vector3f bc_clip = {bc_screen[0] / vo_of_3pts[0].CS_POSITION[3], bc_screen[1] / vo_of_3pts[1].CS_POSITION[3], bc_screen[2] / vo_of_3pts[2].CS_POSITION[3]};
                             float Z_n = 1 / (bc_clip[0] + bc_clip[1] + bc_clip[2]);
-                            if (Z_n >= shadow_map[y * Settings::WIDTH + x] || Z_n < main_light_camera->get_near() || Z_n > main_light_camera->get_far())
+                            if (Z_n >= shadow_map_.get(x, y) || Z_n < main_light_camera->get_near() || Z_n > main_light_camera->get_far())
                             {
                                 continue;
                             }
-                            shadow_map[y * Settings::WIDTH + x] = Z_n;
+                            shadow_map_.set(x, y, Z_n); // view space depth with correction
                         }
                     }
                 }
             }
-            uint8_t *save_data = new uint8_t[Settings::WIDTH * Settings::HEIGHT];
-            for (int i = 0; i < Settings::WIDTH * Settings::HEIGHT; ++i)
-            {
-                save_data[i] = static_cast<uint8_t>(Utils::saturate((shadow_map[i] - main_light_camera->get_near()) / (main_light_camera->get_far() - main_light_camera->get_near())) * 255);
-            }
-            Utils::save_tga_image("../../shadowmap.tga", Settings::WIDTH, Settings::HEIGHT, 1, save_data);
+
             /* Pass 2 */
             for (CameraComponent *cc : get_all_components<CameraComponent>())
             {
@@ -147,7 +154,7 @@ namespace Core
 
                     attribute.ambient = lc->get_ambient_color();
 
-                    std::fill(depth_buffer_, depth_buffer_ + Settings::WIDTH * Settings::HEIGHT, cc->get_far());
+                    depth_buffer_.memset(cc->get_far());
                     for (MeshComponent *mc : get_all_components<MeshComponent>())
                     {
                         attribute.M = mc->getM();
@@ -193,11 +200,11 @@ namespace Core
                                     // Depth interpolate and test
                                     Vector3f bc_clip = {bc_screen[0] / vo_of_3pts[0].CS_POSITION[3], bc_screen[1] / vo_of_3pts[1].CS_POSITION[3], bc_screen[2] / vo_of_3pts[2].CS_POSITION[3]};
                                     float Z_n = 1 / (bc_clip[0] + bc_clip[1] + bc_clip[2]);
-                                    if (Z_n >= depth_buffer_[y * Settings::WIDTH + x] || Z_n < cc->get_near() || Z_n > cc->get_far())
+                                    if (Z_n >= depth_buffer_.get(x, y) || Z_n < cc->get_near() || Z_n > cc->get_far())
                                     {
                                         continue;
                                     }
-                                    depth_buffer_[y * Settings::WIDTH + x] = Z_n;
+                                    depth_buffer_.set(x, y, Z_n); // view space depth with correction
                                     //Color and Normal interpolate
                                     fragment_input.I_UV = (bc_clip[0] * vo_of_3pts[0].UV + bc_clip[1] * vo_of_3pts[1].UV + bc_clip[2] * vo_of_3pts[2].UV) * Z_n;
                                     fragment_input.IWS_NORMAL = (bc_clip[0] * vo_of_3pts[0].WS_NORMAL + bc_clip[1] * vo_of_3pts[1].WS_NORMAL + bc_clip[2] * vo_of_3pts[2].WS_NORMAL) * Z_n;
@@ -205,6 +212,9 @@ namespace Core
                                     fragment_input.IWS_POSITION = (bc_clip[0] * vo_of_3pts[0].WS_POSITION + bc_clip[1] * vo_of_3pts[1].WS_POSITION + bc_clip[2] * vo_of_3pts[2].WS_POSITION) * Z_n;
                                     /* Pipline: fragment */
                                     fragment_out = PhongShader::frag(fragment_input, attribute, uniform);
+                                    /* Visibility test for creating shadow */
+                                    float visibility = HS(fragment_input.IWS_POSITION.reshape<4>(1), main_light_camera->getV(), main_light_camera->getP(), main_light_camera->getViewPort(Vector2i{Settings::WIDTH, Settings::HEIGHT}));
+                                    fragment_out *= visibility;
                                     // rgb -> bgr
                                     render_buffer_[(y * Settings::WIDTH + x) * 3] = fragment_out[2];
                                     render_buffer_[(y * Settings::WIDTH + x) * 3 + 1] = fragment_out[1];

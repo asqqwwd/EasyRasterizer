@@ -31,6 +31,11 @@ namespace Utils
         assert(value >= 0 && value <= 1);
         return value * a + (1 - value) * b;
     }
+
+    Core::Vector4f tone_mapping(const Core::Vector4c& color)
+    {
+        return Core::Vector4f{color[0] / 255.f, color[1] / 255.f, color[2] / 255.f, color[3] / 255.f};
+    }
 }
 
 #endif // ERER_UTILS_MATH_H_

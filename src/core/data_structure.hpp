@@ -15,7 +15,7 @@ namespace Core
     class Tensor
     {
     private:
-        T *data_;
+        T *data_ = nullptr;
 
     public:
         /* Constructor and Destructor */
@@ -86,7 +86,10 @@ namespace Core
         // convert constructor (i.e., what types are allowed to be converted to this class)
         Tensor(float value)
         {
-            data_ = new T[M]();
+            if (data_ == nullptr)
+            {
+                data_ = new T[M]();
+            }
             for (int i = M; i--; data_[i] = std::is_class<T>::value ? value : static_cast<T>(value))
                 ;
         } // implicit convert is tolarable
@@ -392,6 +395,9 @@ namespace Core
     using Vector2i = Tensor<int, 2>;
     using Vector3i = Tensor<int, 3>;
     using Vector4i = Tensor<int, 4>;
+    using Vector2c = Tensor<uint8_t, 2>;
+    using Vector3c = Tensor<uint8_t, 3>;
+    using Vector4c = Tensor<uint8_t, 4>;
 
     using Matrix3i = Tensor<Tensor<int, 3>, 3>;
     using Matrix3f = Tensor<Tensor<float, 3>, 3>;
