@@ -161,34 +161,46 @@ namespace Core
         {
             Scene *scene = new Scene("Default");
 
-            Utils::TGAImage helmet_obj_albedo_tga_image;
-            helmet_obj_albedo_tga_image.read_tga_file("../../obj/helmet/helmet_diffuse.tga");
-            scene
-                ->add_entity(new Entity("HelmetObj"))                                                   //
-                ->add_component(new MeshComponent())                                                    //
-                ->load_vertexes("../../obj/helmet/helmet.obj")                                          //
-                ->set_albedo_texture(Utils::convert_TGAImage_to_CoreImage(helmet_obj_albedo_tga_image)) //
-                ->set_scala(Vector3f{0.8, 0.8, 0.8})                                                    //
-                ->set_position(Vector3f{0, 0, 0});                                                      //
+            // scene
+            //     ->add_entity(new Entity("TestObj"))                                                                     //
+            //     ->add_component(new MeshComponent())                                                                    //
+            //     ->load_vertexes("../../obj/cube.obj")                                                                   //
+            //     ->set_albedo_texture(Utils::convert_TGAImage_to_CoreImage(Utils::TGAImage("../../obj/colormap24.tga"))) //
+            //     ->set_scala(Vector3f{1, 1, 1})                                                                          //
+            //     ->set_position(Vector3f{0, 0.5f, 0});
 
-            Utils::TGAImage floor_obj_albedo_tga_image;
-            floor_obj_albedo_tga_image.read_tga_file("../../obj/floor/floor_diffuse.tga");
-            scene
-                ->add_entity(new Entity("FloorObj"))                                                   //
-                ->add_component(new MeshComponent())                                                   //
-                ->load_vertexes("../../obj/floor/floor.obj")                                           //
-                ->set_albedo_texture(Utils::convert_TGAImage_to_CoreImage(floor_obj_albedo_tga_image)) //
-                ->set_scala(Vector3f{3, 3, 3})                                                         //
-                ->set_position(Vector3f{0, 0, 0});                                                     //
+            // scene
+            //     ->add_entity(new Entity("HelmetObj"))                                                                              //
+            //     ->add_component(new MeshComponent())                                                                               //
+            //     ->load_vertexes("../../obj/helmet/helmet.obj")                                                                     //
+            //     ->set_albedo_texture(Utils::convert_TGAImage_to_CoreImage(Utils::TGAImage("../../obj/helmet/helmet_diffuse.tga"))) //
+            //     ->set_scala(Vector3f{0.8, 0.8, 0.8})                                                                               //
+            //     ->set_position(Vector3f{0, 0, 0});                                                                                 //
 
-            Vector3f main_camera_pos{0, 1.f, 2.f};
+            // scene
+            //     ->add_entity(new Entity("MaryObj"))                                                                                    //
+            //     ->add_component(new MeshComponent())                                                                                   //
+            //     ->load_vertexes("../../obj/marry/Marry.obj")                                                                           //
+            //     ->set_albedo_texture(Utils::convert_TGAImage_to_CoreImage(Utils::TGAImage("../../obj/marry/MC003_Kozakura_Mari.tga"))) //
+            //     ->set_scala(Vector3f{0.5, 0.5, 0.5})                                                                                   //
+            //     ->set_position(Vector3f{0, -1, 0});                                                                                    //
+
+            scene
+                ->add_entity(new Entity("FloorObj"))                                                                             //
+                ->add_component(new MeshComponent())                                                                             //
+                ->load_vertexes("../../obj/floor/floor.obj")                                                                     //
+                ->set_albedo_texture(Utils::convert_TGAImage_to_CoreImage(Utils::TGAImage("../../obj/floor/floor_diffuse.tga"))) //
+                ->set_scala(Vector3f{1, 1, 1})                                                                                   //
+                ->set_position(Vector3f{0, 0, 0});                                                                               //
+
+            Vector3f main_camera_pos{0.f, 1.5f, 1.5f};
             scene
                 ->add_entity(new Entity("MainCamera"))                      //
                 ->add_component(new CameraComponent())                      //
                 ->lookat_with_fixed_up(Vector3f{0, 0, 0} - main_camera_pos) //
                 ->set_position(main_camera_pos);                            //
 
-            Vector3f main_light_pos{4, 4, 4};
+            Vector3f main_light_pos{5, 5, 5};
             scene
                 ->add_entity(new Entity("MainLight"))               //
                 ->add_component(new LightComponent())               //

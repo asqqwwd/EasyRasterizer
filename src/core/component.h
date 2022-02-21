@@ -146,7 +146,7 @@ namespace Core
         Matrix4f M_ortho_;
 
     public:
-        CameraComponent(float near_sp = 0.1f, float far_sp = 10.f, float vertical_angle_of_view = 90.f, float horizontal_angle_of_view = 90.f)
+        CameraComponent(float near_sp = 0.1f, float far_sp = 20.f, float vertical_angle_of_view = 90.f, float horizontal_angle_of_view = 90.f)
             : render_buffer_(new uint8_t[Settings::WIDTH * Settings::HEIGHT * 3]), near_(near_sp), far_(far_sp), vertical_angle_of_view_(vertical_angle_of_view), horizontal_angle_of_view_(horizontal_angle_of_view)
         {
             // near/far is keyword in the windows system! near_sp/far_sp is a substitute for near/far

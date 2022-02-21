@@ -8,8 +8,6 @@
 #include <vector>
 #include <string>
 #include "../core/data_structure.hpp"
-#include "../core/image.h"
-#include "./utils/tgaimage.h"
 
 namespace Utils
 {

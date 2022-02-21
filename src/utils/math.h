@@ -13,10 +13,15 @@ namespace Utils
     };
 
     template <typename T>
-    typename T::type dot_product_3D(const T &a, const T &b)
+    typename T::type dot_product(const T &a, const T &b)
     {
-        assert(T::size() == 3);
-        return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+        // assert(T::size() == 3 || T::size() == 2);
+        T::type ret = 0;
+        for (int i = 0; i < T::size(); ++i)
+        {
+            ret += a[i] * b[i];
+        }
+        return ret;
     }
 
     template <typename T, typename = typename std::enable_if_t<std::is_arithmetic_v<T>>>
@@ -29,10 +34,10 @@ namespace Utils
     T lerp(const T &a, const T &b, float value)
     {
         assert(value >= 0 && value <= 1);
-        return value * a + (1 - value) * b;
+        return (1 - value) * a + value * b;  // not v*a+(1-v)*b!
     }
 
-    Core::Vector4f tone_mapping(const Core::Vector4c& color)
+    Core::Vector4f tone_mapping(const Core::Vector4c &color)
     {
         return Core::Vector4f{color[0] / 255.f, color[1] / 255.f, color[2] / 255.f, color[3] / 255.f};
     }

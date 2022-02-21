@@ -32,9 +32,6 @@ void display(void)
         sys->update();
     }
 
-    // Utils::save_tga_image("../../img.tga", Settings::WIDTH, Settings::HEIGHT, 3, Core::get_entity("MainCamera")->get_component<Core::CameraComponent>()->get_render_buffer());
-    // exit(1);
-
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDrawPixels(Settings::WIDTH, Settings::HEIGHT, GL_BGR_EXT, GL_UNSIGNED_BYTE, Core::get_entity("MainCamera")->get_component<Core::CameraComponent>()->get_render_buffer());
     glutSwapBuffers(); // swap double buffer

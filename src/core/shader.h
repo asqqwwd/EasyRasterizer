@@ -87,6 +87,7 @@ namespace Core
         {
             VertexOutput vo;
             vo.CS_POSITION = attribute.P.mul(attribute.V.mul(attribute.M.mul(vi.MS_POSITION.reshape<4>(1))));
+            // std::cout<<vo.CS_POSITION;
             vo.WS_POSITION = attribute.M.mul(vi.MS_POSITION.reshape<4>(1)).reshape<3>();
             vo.WS_NORMAL = attribute.M.mul(vi.MS_NORMAL.reshape<4>(0)).reshape<3>().normal();
             vo.UV = vi.UV;
@@ -97,9 +98,10 @@ namespace Core
         Vector4i frag(FragmentInput fi, const Attribute &attribute, const Uniform &uniform)
         {
             Vector3f world_half_dir = (attribute.camera_postion - fi.IWS_POSITION - attribute.world_light_dir).normal(); // light/world dir must reverse to keep the half vector on the same side with the normal vector
-            Vector3f diffuse = attribute.light_color * Utils::tone_mapping(uniform.albedo.sampling(fi.I_UV[0], fi.I_UV[1])).reshape<3>() * attribute.light_intensity * std::max(0.f, Utils::dot_product_3D(fi.IWS_NORMAL, -1 * attribute.world_light_dir));
-            Vector3f specular = attribute.light_color * attribute.specular_color * attribute.light_intensity * std::pow(std::max(0.f, Utils::dot_product_3D(fi.IWS_NORMAL, world_half_dir)), uniform.gloss);
-            Vector3f tmp = diffuse + attribute.ambient + specular;
+            Vector3f diffuse = attribute.light_color * Utils::tone_mapping(uniform.albedo.sampling(fi.I_UV[0], fi.I_UV[1])).reshape<3>() * attribute.light_intensity * std::max(0.f, Utils::dot_product(fi.IWS_NORMAL, -1 * attribute.world_light_dir));
+            Vector3f specular = attribute.light_color * attribute.specular_color * attribute.light_intensity * std::pow(std::max(0.f, Utils::dot_product(fi.IWS_NORMAL, world_half_dir)), uniform.gloss);
+            // Vector3f tmp = diffuse + attribute.ambient + specular;
+            Vector3f tmp = diffuse; // Test
             return Vector4i{static_cast<int>(Utils::saturate(tmp[0]) * 255),
                             static_cast<int>(Utils::saturate(tmp[1]) * 255),
                             static_cast<int>(Utils::saturate(tmp[2]) * 255),

@@ -71,6 +71,7 @@ namespace Utils
         };
 
         TGAImage();
+        TGAImage(const std::string filename);
         TGAImage(const int w, const int h, const int bpp);
         bool read_tga_file(const std::string filename);
         bool write_tga_file(const std::string filename, const bool vflip = true, const bool rle = true) const;

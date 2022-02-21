@@ -104,10 +104,10 @@ namespace Core
         T sampling(float u, float v) const
         {
             // (..,0)&(1,..)->[0,1),any value that not in [0,1] cannot reach 1 after clip
-            float clip_u = u > 1 ? u - std::floor(u) : (u < 0 ? -(std::ceil(u) - u) : u);
-            float clip_v = v > 1 ? v - std::floor(v) : (v < 0 ? -(std::ceil(v) - v) : v);
-            int x = static_cast<int>(std::round(clip_u * width_));
-            int y = static_cast<int>(std::round(clip_v * height_));
+            float clip_u = u > 1 ? u - std::floor(u) : (u < 0 ? -(std::floor(u) - u) : u);
+            float clip_v = v > 1 ? v - std::floor(v) : (v < 0 ? -(std::floor(v) - v) : v);
+            int x = static_cast<int>(std::round(clip_u * (width_ - 1)));
+            int y = static_cast<int>(std::round(clip_v * (height_ - 1)));
             return data_[y * width_ + x];
         }
         T sampling(int x, int y) const

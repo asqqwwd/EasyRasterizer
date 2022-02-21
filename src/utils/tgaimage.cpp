@@ -6,6 +6,9 @@
 namespace Utils
 {
     TGAImage::TGAImage() : data_(), width_(0), height_(0), bytespp_(0) {}
+    TGAImage::TGAImage(const std::string filename) : data_(), width_(0), height_(0), bytespp_(0) {
+        read_tga_file(filename);
+    }
     TGAImage::TGAImage(const int w, const int h, const int bpp) : data_(w * h * bpp, 0), width_(w), height_(h), bytespp_(bpp) {}
 
     bool TGAImage::read_tga_file(const std::string filename)
