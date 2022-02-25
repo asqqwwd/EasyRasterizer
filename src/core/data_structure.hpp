@@ -10,6 +10,37 @@
 
 namespace Core
 {
+    template <typename T>
+    struct Iterator
+    {
+        using iterator_category = std::forward_iterator_tag;
+        using difference_type = std::ptrdiff_t;
+        using value_type = T;
+        using pointer = T *;
+        using reference = T &;
+
+        Iterator(pointer ptr) : m_ptr(ptr) {}
+
+        reference operator*() const { return *m_ptr; }
+        pointer operator->() { return m_ptr; }
+        Iterator &operator++()
+        {
+            m_ptr++;
+            return *this;
+        }
+        Iterator operator++(int)
+        {
+            Iterator tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+        friend bool operator==(const Iterator &a, const Iterator &b) { return a.m_ptr == b.m_ptr; };
+        friend bool operator!=(const Iterator &a, const Iterator &b) { return a.m_ptr != b.m_ptr; };
+
+    private:
+        pointer m_ptr;
+    };
+
     /* Generalized tensor template class declaration and definition */
     template <typename T, int M>
     class Tensor
@@ -329,6 +360,12 @@ namespace Core
             return M;
         } // you must indicate constexpr for passing compiling, and static is aimed at getting static variable
         using type = T;
+
+        using iterator = Iterator<T>;
+        iterator begin() { return iterator(&data_[0]); }
+        iterator begin() const { return iterator(&data_[0]); }  // any membership variable in const function automatically becomes const, but local variable is unaffected
+        iterator end() { return iterator(&data_[M]); }
+        iterator end() const { return iterator(&data_[M]); }
     };
 
     template <typename T, int M>
@@ -403,37 +440,6 @@ namespace Core
     using Matrix3f = Tensor<Tensor<float, 3>, 3>;
     using Matrix4f = Tensor<Tensor<float, 4>, 4>;
 
-    template<typename T>
-    struct Iterator
-    {
-        using iterator_category = std::forward_iterator_tag;
-        using difference_type = std::ptrdiff_t;
-        using value_type = T;
-        using pointer = T *;
-        using reference = T &;
-
-        Iterator(pointer ptr) : m_ptr(ptr) {}
-        
-
-        reference operator*() const { return *m_ptr; }
-        pointer operator->() { return m_ptr; }
-        Iterator &operator++()
-        {
-            m_ptr++;
-            return *this;
-        }
-        Iterator operator++(int)
-        {
-            Iterator tmp = *this;
-            ++(*this);
-            return tmp;
-        }
-        friend bool operator==(const Iterator &a, const Iterator &b) { return a.m_ptr == b.m_ptr; };
-        friend bool operator!=(const Iterator &a, const Iterator &b) { return a.m_ptr != b.m_ptr; };
-
-    private:
-        pointer m_ptr;
-    };
 }
 
 #endif // ERER_CORE_DATA_STRUCTURE_H_

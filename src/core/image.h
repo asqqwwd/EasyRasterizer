@@ -85,12 +85,12 @@ namespace Core
         }
         T get(int x, int y) const
         {
-            assert(data_ != nullptr && x >= 0 && y >= 0 && x < width_ && y < height_);
+            // assert(data_ != nullptr && x >= 0 && y >= 0 && x < width_ && y < height_);
             return data_[y * width_ + x];
         }
         void set(int x, int y, const T &value)
         {
-            assert(data_ != nullptr && x >= 0 && y >= 0 && x < width_ && y < height_);
+            // assert(data_ != nullptr && x >= 0 && y >= 0 && x < width_ && y < height_);
             data_[y * width_ + x] = value;
         }
         int get_width() const

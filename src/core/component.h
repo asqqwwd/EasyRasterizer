@@ -98,7 +98,7 @@ namespace Core
             {
                 for (int i = 0; i < 3; ++i)
                 {
-                    tmp.MS_POSITION = positions[f[0][i]];
+                    tmp.MS_POSITION = positions[f[0][i]].reshape<4>(1);
                     tmp.UV = uvs[f[1][i]];
                     tmp.MS_NORMAL = normals[f[2][i]];
                     in_vertexes_.push_back(tmp);
@@ -108,7 +108,7 @@ namespace Core
             return this;
         }
 
-        MeshComponent *set_albedo_texture(const Image<Vector4c>& img)
+        MeshComponent *set_albedo_texture(const Image<Vector4c> &img)
         {
             albedo_ = img;
             return this;
@@ -133,12 +133,14 @@ namespace Core
     class CameraComponent : public Component
     {
     private:
-        uint8_t *render_buffer_;
+        uint8_t *color_buffer_;
+        Image<float> depth_buffer_; // assuming that all depth is larger than 0
 
         float near_;
         float far_;
         float vertical_angle_of_view_;
         float horizontal_angle_of_view_;
+        bool is_color_camera_;
 
         Matrix4f R_view_;
         Matrix4f T_view_;
@@ -146,9 +148,14 @@ namespace Core
         Matrix4f M_ortho_;
 
     public:
-        CameraComponent(float near_sp = 0.1f, float far_sp = 20.f, float vertical_angle_of_view = 90.f, float horizontal_angle_of_view = 90.f)
-            : render_buffer_(new uint8_t[Settings::WIDTH * Settings::HEIGHT * 3]), near_(near_sp), far_(far_sp), vertical_angle_of_view_(vertical_angle_of_view), horizontal_angle_of_view_(horizontal_angle_of_view)
+        CameraComponent(float near_sp = 0.1f, float far_sp = 20.f, float vertical_angle_of_view = 90.f, float horizontal_angle_of_view = 90.f, bool is_color_camera = true)
+            : near_(near_sp), far_(far_sp), vertical_angle_of_view_(vertical_angle_of_view), horizontal_angle_of_view_(horizontal_angle_of_view), is_color_camera_(is_color_camera)
         {
+            if (is_color_camera)
+            {
+                color_buffer_ = new uint8_t[Settings::WIDTH * Settings::HEIGHT * 3];
+            }
+            depth_buffer_ = Image<float>(Settings::WIDTH, Settings::HEIGHT);
             // near/far is keyword in the windows system! near_sp/far_sp is a substitute for near/far
             M_persp2ortho_ = Matrix4f{{near_, 0, 0, 0}, {0, near_, 0, 0}, {0, 0, near_ + far_, -near_ * far_}, {0, 0, 1, 0}};
             M_ortho_ = Matrix4f{{static_cast<float>(1 / (near_ * std::tan(horizontal_angle_of_view_ / 360 * PI))), 0, 0, 0}, {0, static_cast<float>(1 / (near_ * std::tan(vertical_angle_of_view_ / 360 * PI))), 0, 0}, {0, 0, 2 / (far_ - near_), -(near_ + far_) / (far_ - near_)}, {0, 0, 0, 1}};
@@ -201,9 +208,13 @@ namespace Core
             return this;
         }
 
-        uint8_t *get_render_buffer()
+        void flush_buffer()
         {
-            return render_buffer_;
+            if (is_color_camera_)
+            {
+                memset(color_buffer_, 0U, Settings::WIDTH * Settings::HEIGHT * 3);
+            }
+            depth_buffer_.memset(far_);
         }
 
         Matrix4f getV()
@@ -223,7 +234,9 @@ namespace Core
 
         Matrix4f getViewPort(const Vector2i &screen)
         {
-            return Matrix4f{{screen[0] / 2.f, 0, 0, screen[0] / 2.f}, {0, screen[1] / 2.f, 0, screen[1] / 2.f}, {0, 0, 1 / 2.f, 1 / 2.f}, {0, 0, 0, 1}};
+            Matrix4f S{{screen[0] / 2.f, 0, 0, 0}, {0, screen[1] / 2.f, 0, 0}, {0, 0, (far_ - near_) / 2, 0}, {0, 0, 0, 1}};
+            Matrix4f T{{1, 0, 0, screen[0] / 2.f}, {0, 1, 0, screen[1] / 2.f}, {0, 0, 1, (far_ + near_) / 2}, {0, 0, 0, 1}};
+            return T.mul(S);
         }
 
         Vector3f get_lookat_dir()
@@ -239,6 +252,21 @@ namespace Core
         float get_far()
         {
             return far_;
+        }
+
+        uint8_t *get_color_buffer()
+        {
+            return color_buffer_;
+        }
+
+        Image<float> &get_depth_buffer()
+        {
+            return depth_buffer_;
+        }
+
+        bool is_color_camera()
+        {
+            return is_color_camera_;
         }
     };
 
