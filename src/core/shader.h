@@ -7,12 +7,11 @@
 
 namespace Core
 {
-    struct ObjAttribute
+    struct MeshAttribute
     {
         Matrix4f M;
-        Matrix4f V;
-        Matrix4f P;
-
+        Image<Vector4c> albedo; // control the primary color of the surface
+        float gloss;
     };
 
     struct LightAttribute
@@ -29,16 +28,13 @@ namespace Core
         Vector3f ambient;
     };
 
-    struct CameraAttribute{
+    struct CameraAttribute
+    {
+        Matrix4f V;
+        Matrix4f P;
+
         Vector3f camera_postion;
     };
-
-    struct Uniform
-    {
-        Image<Vector4c> albedo; // control the primary color of the surface
-        float gloss;
-        // Pixmap
-    }; // user self-defined
 
     struct VertexInput
     {
@@ -119,23 +115,23 @@ namespace Core
 
     namespace PhongShader
     {
-        VertexOutput vert(const VertexInput &vi, const ObjAttribute& oa)
+        VertexOutput vert(const VertexInput &vi, const CameraAttribute &ca,const MeshAttribute &ma)
         {
             VertexOutput vo;
-            vo.WS_POSITION = oa.M.mul(vi.MS_POSITION);
-            vo.CS_POSITION = oa.P.mul(oa.V.mul(vo.WS_POSITION));
+            vo.WS_POSITION = ma.M.mul(vi.MS_POSITION);
+            vo.CS_POSITION = ca.P.mul(ca.V.mul(vo.WS_POSITION));
             // std::cout<<vo.CS_POSITION;
-            vo.WS_NORMAL = oa.M.mul(vi.MS_NORMAL.reshape<4>(0)).reshape<3>().normal();
+            vo.WS_NORMAL = ma.M.mul(vi.MS_NORMAL.reshape<4>(0)).reshape<3>().normal();
             vo.UV = vi.UV;
 
             return vo;
         }
 
-        Vector4c frag(FragmentInput fi, const LightAttribute &la,const CameraAttribute &ca,const Uniform &uniform)
+        Vector4c frag(FragmentInput fi, const LightAttribute &la, const CameraAttribute &ca, const MeshAttribute &ma)
         {
             Vector3f world_half_dir = (ca.camera_postion - fi.IWS_POSITION.reshape<3>() - la.world_light_dir).normal(); // light/world dir must reverse to keep the half vector on the same side with the normal vector
-            Vector3f diffuse = la.light_color * Utils::tone_mapping(uniform.albedo.sampling(fi.I_UV[0], 1 - fi.I_UV[1])).reshape<3>() * la.light_intensity * std::max(0.f, Utils::dot_product(fi.IWS_NORMAL, -1 * la.world_light_dir));
-            Vector3f specular = la.light_color * la.specular_color * la.light_intensity * std::pow(std::max(0.f, Utils::dot_product(fi.IWS_NORMAL, world_half_dir)), uniform.gloss);
+            Vector3f diffuse = la.light_color * Utils::tone_mapping(ma.albedo.sampling(fi.I_UV[0], 1 - fi.I_UV[1])).reshape<3>() * la.light_intensity * std::max(0.f, Utils::dot_product(fi.IWS_NORMAL, -1 * la.world_light_dir));
+            Vector3f specular = la.light_color * la.specular_color * la.light_intensity * std::pow(std::max(0.f, Utils::dot_product(fi.IWS_NORMAL, world_half_dir)), ma.gloss);
             Vector3f tmp = diffuse + la.ambient + specular;
             // Vector3f tmp = diffuse; // Test
             return Vector4c{static_cast<uint8_t>(Utils::saturate(tmp[0]) * 255),

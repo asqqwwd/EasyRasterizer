@@ -58,16 +58,16 @@ namespace Core
             }
             return this;
         }
-        Vector3f get_position()
+        Vector3f get_position() const
         {
             return Vector3f{T_model_[0][3], T_model_[1][3], T_model_[2][3]};
         }
-        Vector3f get_scala()
+        Vector3f get_scala() const
         {
             return Vector3f{S_model_[0][0], S_model_[1][1], S_model_[2][2]};
         }
 
-        Matrix4f getM()
+        Matrix4f getM() const
         {
             return T_model_.mul(R_model_.mul(S_model_));
         }
@@ -75,13 +75,20 @@ namespace Core
 
     class MeshComponent : public Component
     {
+    public:
+        enum Type
+        {
+            Opaque = 0,
+            Transparent
+        } type;
+
     private:
         std::vector<VertexInput> in_vertexes_;
         Image<Vector4c> albedo_;
         float gloass_;
 
     public:
-        MeshComponent() : gloass_(10)
+        MeshComponent(MeshComponent::Type tp = MeshComponent::Type::Opaque) : gloass_(10), type(tp)
         {
         }
 
@@ -132,6 +139,13 @@ namespace Core
 
     class CameraComponent : public Component
     {
+    public:
+        enum Type
+        {
+            ColorCamera = 0,
+            DepthCamera
+        } type;
+
     private:
         uint8_t *color_buffer_;
         Image<float> depth_buffer_; // assuming that all depth is larger than 0
@@ -140,7 +154,6 @@ namespace Core
         float far_;
         float vertical_angle_of_view_;
         float horizontal_angle_of_view_;
-        bool is_color_camera_;
 
         Matrix4f R_view_;
         Matrix4f T_view_;
@@ -148,10 +161,10 @@ namespace Core
         Matrix4f M_ortho_;
 
     public:
-        CameraComponent(float near_sp = 0.1f, float far_sp = 20.f, float vertical_angle_of_view = 90.f, float horizontal_angle_of_view = 90.f, bool is_color_camera = true)
-            : near_(near_sp), far_(far_sp), vertical_angle_of_view_(vertical_angle_of_view), horizontal_angle_of_view_(horizontal_angle_of_view), is_color_camera_(is_color_camera)
+        CameraComponent(CameraComponent::Type tp, float n = 0.1f, float f = 20.f, float va = 90.f, float ha = 90.f)
+            : near_(n), far_(f), vertical_angle_of_view_(va), horizontal_angle_of_view_(ha), type(tp)
         {
-            if (is_color_camera)
+            if (type == CameraComponent::Type::ColorCamera)
             {
                 color_buffer_ = new uint8_t[Settings::WIDTH * Settings::HEIGHT * 3];
             }
@@ -210,7 +223,7 @@ namespace Core
 
         void flush_buffer()
         {
-            if (is_color_camera_)
+            if (type == CameraComponent::Type::ColorCamera)
             {
                 memset(color_buffer_, 0U, Settings::WIDTH * Settings::HEIGHT * 3);
             }
@@ -256,7 +269,17 @@ namespace Core
 
         uint8_t *get_color_buffer()
         {
+            assert(type == CameraComponent::Type::ColorCamera);
             return color_buffer_;
+        }
+
+        void set_color_buffer(int x, int y, Vector4c value)
+        {
+            assert(type == CameraComponent::Type::ColorCamera);
+            // rgb -> bgr
+            color_buffer_[(y * Settings::WIDTH + x) * 3] = value[2];
+            color_buffer_[(y * Settings::WIDTH + x) * 3 + 1] = value[1];
+            color_buffer_[(y * Settings::WIDTH + x) * 3 + 2] = value[0];
         }
 
         Image<float> &get_depth_buffer()
@@ -264,9 +287,9 @@ namespace Core
             return depth_buffer_;
         }
 
-        bool is_color_camera()
+        void set_depth_buffer(int x, int y, float value)
         {
-            return is_color_camera_;
+            depth_buffer_.set(x, y, value); // view space depth with correction
         }
     };
 

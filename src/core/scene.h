@@ -195,10 +195,10 @@ namespace Core
 
             Vector3f main_camera_pos{0.f, 1.5f, 1.5f};
             scene
-                ->add_entity(new Entity("MainCamera"))                      //
-                ->add_component(new CameraComponent())                      //
-                ->lookat_with_fixed_up(Vector3f{0, 0, 0} - main_camera_pos) //
-                ->set_position(main_camera_pos);                            //
+                ->add_entity(new Entity("MainCamera"))                                   //
+                ->add_component(new CameraComponent(CameraComponent::Type::ColorCamera)) //
+                ->lookat_with_fixed_up(Vector3f{0, 0, 0} - main_camera_pos)              //
+                ->set_position(main_camera_pos);                                         //
 
             Vector3f main_light_pos{5, 5, 5};
             scene
@@ -209,7 +209,7 @@ namespace Core
                 ->set_position(main_light_pos);                     //
             scene
                 ->get_entity("MainLight")                                                                                //
-                ->add_component(new CameraComponent())                                                                   //
+                ->add_component(new CameraComponent(CameraComponent::Type::DepthCamera))                                 //
                 ->lookat_with_fixed_up(scene->get_entity("MainLight")->get_component<LightComponent>()->get_light_dir()) //
                 ->set_position(scene->get_entity("MainLight")->get_component<LightComponent>()->get_position());         //
 
