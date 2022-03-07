@@ -82,6 +82,8 @@ namespace Core
             Transparent
         } type;
 
+        float Z_view;
+
     private:
         std::vector<VertexInput> in_vertexes_;
         Image<Vector4c> albedo_;

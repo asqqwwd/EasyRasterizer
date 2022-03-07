@@ -13,6 +13,8 @@
 #include "shader.h"
 #include "time.h"
 #include "../settings.h"
+#include "../utils/math.h"
+#include "../utils/timer.h"
 
 namespace Core
 {
@@ -146,16 +148,20 @@ namespace Core
 
         float HS(const Image<float> &shadow_map, const Vector4f &WS_pos, const Matrix4f &V, const Matrix4f &P, const Matrix4f &ViewPort)
         {
-            Vector4f NDC_pos = P.mul(V.mul(WS_pos));
-            float view_space_depth = NDC_pos[3];
-            NDC_pos = NDC_pos / NDC_pos[3];
-            float u = (NDC_pos[0] + 1) / 2;
-            float v = (NDC_pos[1] + 1) / 2;
+            Vector4f CS_pos = P.mul(V.mul(WS_pos));
+            float view_space_depth = CS_pos[3];
+            CS_pos = CS_pos / CS_pos[3];
+            float u = (CS_pos[0] + 1) / 2;
+            float v = (CS_pos[1] + 1) / 2;
             float first_depth = shadow_map.sampling(u, v);
             return (view_space_depth - first_depth > 0.05f) ? 0.f : 1.f;
         }
         void Pass(const std::vector<MeshComponent *> &meshes, const std::vector<LightComponent *> &lights, const std::vector<CameraComponent *> &cameras, bool ZWrite = true, bool ZTest = true, bool ColorWrite = true)
         {
+            if (meshes.size() == 0 || lights.size() == 0 || cameras.size() == 0)
+            {
+                return;
+            }
             for (CameraComponent *camera : cameras)
             {
                 // Buffer flush
@@ -179,6 +185,7 @@ namespace Core
 
                     for (MeshComponent *mesh : meshes)
                     {
+
                         // Getting attributes
                         MeshAttribute ma; // mesh attribute
                         ma.M = mesh->getM();
@@ -194,6 +201,7 @@ namespace Core
                             {
                                 vo3[j] = PhongShader::vert(in_vertexes[i + j], ca, ma);
                             }
+
                             // Homogeneous clipping
                             std::vector<Triangle<VertexOutput>> clip_tris = homogeneous_clipping(std::vector<Triangle<VertexOutput>>{vo3}, 0);
 
@@ -254,9 +262,11 @@ namespace Core
                                         fi.I_UV = interp_vo.UV * Z_n;
                                         fi.IWS_NORMAL = interp_vo.WS_NORMAL * Z_n;
                                         fi.IWS_POSITION = interp_vo.WS_POSITION * Z_n;
+
                                         /* Pipline: fragment */
                                         Vector4c fo = PhongShader::frag(fi, la, ca, ma);
                                         /* Visibility test for creating shadow */
+
                                         float visibility = 0.f;
                                         for (auto dp_camera : depth_cameras_)
                                         {
@@ -276,59 +286,6 @@ namespace Core
             }                 // end for camera
         }
 
-        class SortByDist
-        {
-        private:
-            static std::default_random_engine e_;
-            static Matrix4f V_;
-            static float wrapper_func(const MeshComponent &comp, const Matrix4f &V)
-            {
-                return V.mul(comp.get_position().reshape<4>(1))[2];
-            }
-            static bool com_func(const MeshComponent &comp1, const MeshComponent &comp2, const Matrix4f &V)
-            {
-                return wrapper_func(comp1, V) < wrapper_func(comp2, V) ? true : false;
-            }
-            static int partition(std::vector<MeshComponent *> &elms, int l, int r)
-            {
-                MeshComponent *pivot = elms[r];
-                int i = l - 1;
-                for (int j = l; j <= r - 1; ++j)
-                {
-                    if (com_func(*(elms[j]), *pivot, V_))
-                    {
-                        i = i + 1;
-                        std::swap(elms[i], elms[j]);
-                    }
-                }
-                std::swap(elms[i + 1], elms[r]);
-                return i + 1;
-            }
-            static int randomized_partition(std::vector<MeshComponent *> &elms, int l, int r)
-            {
-                int i = e_() % (r - l + 1) + l; // choose a random element as pivot
-                std::swap(elms[r], elms[i]);
-                return partition(elms, l, r);
-            }
-            static void randomized_quicksort(std::vector<MeshComponent *> &elms, int l, int r)
-            {
-                if (l < r)
-                {
-                    int pos = randomized_partition(elms, l, r);
-                    randomized_quicksort(elms, l, pos - 1);
-                    randomized_quicksort(elms, pos + 1, r);
-                }
-            }
-
-        public:
-            static void run(std::vector<MeshComponent *> &elms, const Matrix4f &V)
-            {
-                V_ = V;
-                e_.seed(std::chrono::steady_clock::now().time_since_epoch().count());
-                randomized_quicksort(elms, 0, static_cast<int>(elms.size()) - 1);
-            }
-        };
-
     public:
         RasterizeSystem() : System(this)
         {
@@ -336,6 +293,7 @@ namespace Core
 
         void update()
         {
+
             auto cameras = current_scene->get_all_components<CameraComponent>();
             decltype(cameras) color_cameras;
             decltype(cameras) depth_cameras;
@@ -358,7 +316,7 @@ namespace Core
 
             auto meshes = current_scene->get_all_components<MeshComponent>();
             decltype(meshes) opaque_meshes;
-            decltype(meshes) transparent_cameras;
+            decltype(meshes) transparent_meshes;
             for (auto mesh : meshes)
             {
                 switch (mesh->type)
@@ -367,18 +325,32 @@ namespace Core
                     opaque_meshes.push_back(mesh);
                     break;
                 case MeshComponent::Type::Transparent:
-                    transparent_cameras.push_back(mesh);
+                    transparent_meshes.push_back(mesh);
                     break;
                 default:
                     throw std::exception("Unknown mesh type!\n");
                     break;
                 }
             }
-            // // Sort by view space distance
-            // for (auto color_camera : color_cameras)
-            // {
-            //     SortByDist::run(meshes, color_camera->getV());
-            // }
+
+            // Sort by view space distance
+            auto increase_cmp_func = [](const MeshComponent *comp1, const MeshComponent *comp2) -> bool
+            {
+                return (*comp1).Z_view < (*comp2).Z_view;
+            };
+            auto decrease_cmp_func = [](const MeshComponent *comp1, const MeshComponent *comp2) -> bool
+            {
+                return (*comp1).Z_view > (*comp2).Z_view;
+            };
+            for (auto color_camera : color_cameras)
+            {
+                for (auto mesh : meshes)
+                {
+                    mesh->Z_view = color_camera->getV().mul(mesh->get_position().reshape<4>(1))[2];
+                }
+                std::sort(opaque_meshes.begin(), opaque_meshes.end(), increase_cmp_func);
+                std::sort(transparent_meshes.begin(), transparent_meshes.end(), decrease_cmp_func);
+            }
 
             // Depth camera render
             auto lights = current_scene->get_all_components<LightComponent>();
@@ -386,7 +358,8 @@ namespace Core
             depth_cameras_ = depth_cameras;
 
             // Color camera render
-            Pass(meshes, lights, color_cameras);
+            Pass(opaque_meshes, lights, color_cameras);
+            Pass(transparent_meshes, lights, color_cameras);
         }
     };
 
