@@ -66,6 +66,20 @@ namespace Utils
         }
     }
 
+    Utils::TGAImage convert_raw_data_to_TGAImage(uint8_t *in_data_p, int w, int h, int bpp)
+    {
+        Utils::TGAImage ret(w, h, bpp);
+        for (int y = 0; y < h; ++y)
+        {
+            for (int x = 0; x < w; ++x)
+            {
+                // rgba -> bgra
+                ret.set(x, y, Utils::TGAColor(in_data_p[bpp * (y * w + x) + 2], in_data_p[bpp * (y * w + x) + 1], in_data_p[bpp * (y * w + x)]));
+            }
+        }
+        return ret;
+    }
+
 }
 
 #endif // ERER_UTILS_CONVERT_H_

@@ -157,7 +157,7 @@ namespace Core
             return (view_space_depth - first_depth > correct_eps) ? 0.f : 1.f;
         }
 
-        float PCF(const Image<float> &shadow_map, const Vector4f &WS_pos, const Vector3f &WS_normal, const Vector3f &camera_look_at_dir, const Matrix4f &V, const Matrix4f &P, const Matrix4f &ViewPort, float eps = 0.01f, float filter_size = 0.02f)
+        float PCF(const Image<float> &shadow_map, const Vector4f &WS_pos, const Vector3f &WS_normal, const Vector3f &camera_look_at_dir, const Matrix4f &V, const Matrix4f &P, const Matrix4f &ViewPort, float eps = 0.05f, float filter_size = 0.02f)
         {
             Vector4f CS_pos = P.mul(V.mul(WS_pos));
             float d_receiver = CS_pos[3];
@@ -165,35 +165,39 @@ namespace Core
             CS_pos = CS_pos / CS_pos[3];
             float u = (CS_pos[0] + 1) / 2;
             float v = (CS_pos[1] + 1) / 2;
-            float correct_eps = eps / std::fabs(Utils::dot_product(WS_normal.normal(), camera_look_at_dir.normal()));
+            float correct_eps = eps / std::pow(std::fabs(Utils::dot_product(WS_normal.normal(), camera_look_at_dir.normal())), 4.f);
 
-            float d_blocker_pp = shadow_map.sampling(u, v);
-            float d_blocker_avg = 0.f;
+            // Random hit
             std::vector<Vector2f> rd_samples = Utils::RandomSample::poissonDiskSamples(10, 50);
+            bool flag = false;
             for (const auto &rd_sample : rd_samples)
             {
-                d_blocker_avg += shadow_map.sampling(u + rd_sample[0] * filter_size, v + rd_sample[1] * filter_size);
+                float d_blocker = shadow_map.sampling(u + rd_sample[0] * filter_size, v + rd_sample[1] * filter_size);
+                if (d_receiver - d_blocker > correct_eps)
+                {
+                    flag = true;
+                    break;
+                }
             }
-            d_blocker_avg /= rd_samples.size();
-            if (!(d_receiver - d_blocker_avg > correct_eps + 0.15f))
+            if (!flag) // hit miss, return directly
             {
                 return 1.f;
             }
 
             float avg_viz = 0.f;
-            std::vector<Vector2f> rd_samples = Utils::RandomSample::poissonDiskSamples(10, 100);
+            rd_samples = Utils::RandomSample::poissonDiskSamples(10, 100);
             // std::vector<Vector2f> rd_samples = Utils::RandomSample::uniformDiskSamples();
             // float correct_eps = std::max(eps * (1.0f - std::fabs(Utils::dot_product(WS_normal.normal(), camera_look_at_dir.normal()))), 0.03f);
             for (const auto &rd_sample : rd_samples)
             {
                 float d_blocker = shadow_map.sampling(u + rd_sample[0] * filter_size, v + rd_sample[1] * filter_size);
-                avg_viz += (d_receiver - d_blocker > correct_eps + 0.15f) ? 0.f : 1.f;
+                avg_viz += (d_receiver - d_blocker > correct_eps) ? 0.f : 1.f;
             }
             avg_viz /= rd_samples.size();
             return avg_viz;
         }
 
-        float PCSS(const Image<float> &shadow_map, const Vector4f &WS_pos, const Vector3f &WS_normal, const Vector3f &camera_look_at_dir, const Matrix4f &V, const Matrix4f &P, const Matrix4f &ViewPort, float eps = 0.01f, float default_filter_size = 0.02f, float w_light = 3.f)
+        float PCSS(const Image<float> &shadow_map, const Vector4f &WS_pos, const Vector3f &WS_normal, const Vector3f &camera_look_at_dir, const Matrix4f &V, const Matrix4f &P, const Matrix4f &ViewPort, float eps = 0.05f, float w_light = 1.f)
         {
             Vector4f CS_pos = P.mul(V.mul(WS_pos));
             float d_receiver = CS_pos[3];
@@ -201,33 +205,37 @@ namespace Core
             CS_pos = CS_pos / CS_pos[3];
             float u = (CS_pos[0] + 1) / 2;
             float v = (CS_pos[1] + 1) / 2;
+            float correct_eps = eps / std::pow(std::fabs(Utils::dot_product(WS_normal.normal(), camera_look_at_dir.normal())), 4.f);
+            float filter_size = 0.15f * w_light / d_receiver; // the farther the distance, the smaller the filter_size
 
-            float correct_eps = eps / std::fabs(Utils::dot_product(WS_normal.normal(), camera_look_at_dir.normal()));
-            float d_blocker_pp = shadow_map.sampling(u, v);
+            // Blocker search
+            std::vector<Vector2f> rd_samples = Utils::RandomSample::poissonDiskSamples(5, 150);
             float d_blocker_avg = 0.f;
-            if (d_receiver - d_blocker_pp > eps)
-            {
-                std::vector<Vector2f> rd_samples = Utils::RandomSample::poissonDiskSamples(10, 20);
-                float filter_size = w_light * d_blocker_pp / d_receiver * 0.1f;
-                for (const auto &rd_sample : rd_samples)
-                {
-                    d_blocker_avg += shadow_map.sampling(u + rd_sample[0] * filter_size, v + rd_sample[1] * filter_size);
-                }
-                d_blocker_avg /= rd_samples.size();
-            }
-            // float d_blocker_avg = 0.f;
-            // if (d_receiver - d_blocker_pp > eps)
-            // {
-            //     d_blocker_avg = d_blocker_pp;
-            // }
-
-            float avg_viz = 0.f;
-            std::vector<Vector2f> rd_samples = Utils::RandomSample::poissonDiskSamples(10, 80);
-            float filter_size = d_blocker_avg < 1e-6 ? default_filter_size : default_filter_size * w_light * (d_receiver - d_blocker_avg) / d_blocker_avg;
+            int k = 0;
             for (const auto &rd_sample : rd_samples)
             {
-                float d_blocker_rd = shadow_map.sampling(u + rd_sample[0] * filter_size, v + rd_sample[1] * filter_size);
-                avg_viz += (d_receiver - d_blocker_rd > eps + 0.15f) ? 0.f : 1.f;
+                float d_blocker = shadow_map.sampling(u + rd_sample[0] * filter_size, v + rd_sample[1] * filter_size);
+                if (d_receiver - d_blocker > correct_eps)
+                {
+                    d_blocker_avg += d_blocker;
+                    ++k;
+                }
+            }
+            if (k == 0) // hit miss, return directly
+            {
+                return 1.f;
+            }
+            d_blocker_avg /= k;
+
+            // Dynamic filter_size
+            float avg_viz = 0.f;
+            rd_samples = Utils::RandomSample::poissonDiskSamples(5, 150);
+            float dynamic_filter_size = 0.001f * w_light * k * (d_receiver - d_blocker_avg) / d_blocker_avg;
+            // float dynamic_filter_size = filter_size * (d_receiver - d_blocker_avg) / d_blocker_avg;
+            for (const auto &rd_sample : rd_samples)
+            {
+                float d_blocker_rd = shadow_map.sampling(u + rd_sample[0] * dynamic_filter_size, v + rd_sample[1] * dynamic_filter_size);
+                avg_viz += (d_receiver - d_blocker_rd > eps) ? 0.f : 1.f;
             }
             avg_viz /= rd_samples.size();
             return avg_viz;

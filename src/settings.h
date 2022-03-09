@@ -6,8 +6,8 @@
 
 namespace Settings
 {
-    const int WIDTH = 800;  // 水平方向长度
-    const int HEIGHT = 800; // 垂直方向长度
+    const int WIDTH = 600;  // 水平方向长度
+    const int HEIGHT = 600; // 垂直方向长度
 }
 
 #endif // ERER_SETTINGS_H_
