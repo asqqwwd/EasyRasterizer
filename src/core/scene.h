@@ -174,8 +174,8 @@ namespace Core
             //     ->add_component(new MeshComponent())                                                                               //
             //     ->load_vertexes("../../obj/helmet/helmet.obj")                                                                     //
             //     ->set_albedo_texture(Utils::convert_TGAImage_to_CoreImage(Utils::TGAImage("../../obj/helmet/helmet_diffuse.tga"))) //
-            //     ->set_scala(Vector3f{0.8, 0.8, 0.8})                                                                               //
-            //     ->set_position(Vector3f{0, 0, 0});                                                                                 //
+            //     ->set_scala(Vector3f{0.6, 0.6, 0.6})                                                                               //
+            //     ->set_position(Vector3f{0, 0.6, 0});                                                                                 //
 
             // scene
             //     ->add_entity(new Entity("MaryObj"))                                                                                    //
@@ -200,7 +200,7 @@ namespace Core
                 ->lookat_with_fixed_up(Vector3f{0, 0, 0} - main_camera_pos)              //
                 ->set_position(main_camera_pos);                                         //
 
-            Vector3f main_light_pos{5, 5, 5};
+            Vector3f main_light_pos{1.5f, 2.5f, 1.5f};
             scene
                 ->add_entity(new Entity("MainLight"))               //
                 ->add_component(new LightComponent())               //

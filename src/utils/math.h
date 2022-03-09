@@ -8,12 +8,6 @@
 
 #include "../settings.h"
 
-// Shadow map related variables
-#define NUM_SAMPLES 20
-#define BLOCKER_SEARCH_NUM_SAMPLES NUM_SAMPLES
-#define PCF_NUM_SAMPLES NUM_SAMPLES
-#define NUM_RINGS 10
-
 namespace Utils
 {
     template <typename T>
@@ -53,65 +47,83 @@ namespace Utils
         return Core::Vector4f{color[0] / 255.f, color[1] / 255.f, color[2] / 255.f, color[3] / 255.f};
     }
 
-    float fract(float x)
+    namespace Random
     {
-        return x - std::floor(x);
-    }
-
-    float rand_1to1(float x)
-    {
-        // -1 -1
-        return fract(sin(x) * 10000.0);
-    }
-
-    float rand_2to1(Core::Vector2f uv)
-    {
-        // 0 - 1
-        const float a = 12.9898, b = 78.233, c = 43758.5453;
-        float dt = dot_product(uv, Core::Vector2f{a, b}), sn = std::fmod(dt, PI);
-        return fract(sin(sn) * c);
-    }
-
-    std::vector<Core::Vector2f> poissonDiskSamples(const Core::Vector2f &randomSeed)
-    {
-        float ANGLE_STEP = PI2 * float(NUM_RINGS) / float(NUM_SAMPLES);
-        float INV_NUM_SAMPLES = 1.0 / float(NUM_SAMPLES);
-
-        float angle = rand_2to1(randomSeed) * PI2;
-        float radius = INV_NUM_SAMPLES;
-        float radiusStep = radius;
-
-        std::vector<Core::Vector2f> ret;
-        for (int i = 0; i < NUM_SAMPLES; i++)
+        std::default_random_engine generator;
+        std::uniform_real_distribution<float> distribution;
+        float get_random_float_01()
         {
-            ret.push_back(Core::Vector2f{cos(angle), sin(angle)} * std::pow(radius, 0.75));
-            radius += radiusStep;
-            angle += ANGLE_STEP;
+            generator.seed(static_cast<unsigned int>(std::chrono::steady_clock::now().time_since_epoch().count()));
+            return distribution(generator);
         }
-        return ret;
     }
 
-    std::vector<Core::Vector2f> uniformDiskSamples(const Core::Vector2f &randomSeed)
+    namespace RandomSample
     {
-        float randNum = rand_2to1(randomSeed);
-        float sampleX = rand_1to1(randNum);
-        float sampleY = rand_1to1(sampleX);
-
-        float angle = sampleX * PI2;
-        float radius = std::sqrt(sampleY);
-
-        std::vector<Core::Vector2f> ret;
-        for (int i = 0; i < NUM_SAMPLES; i++)
+        float fract(float x)
         {
-            ret.push_back(Core::Vector2f{cos(angle), sin(angle)} * std::pow(radius, 0.75));
-
-            sampleX = rand_1to1(sampleY);
-            sampleY = rand_1to1(sampleX);
-
-            angle = sampleX * PI2;
-            radius = std::sqrt(sampleY);
+            return x - std::floor(x);
         }
-        return ret;
+
+        float rand_1to1(float x)
+        {
+            // -1 -1
+            return fract(std::sin(x) * 10000.0f);
+        }
+
+        float rand_2to1(Core::Vector2f uv)
+        {
+            // 0 - 1
+            const float a = 12.9898f, b = 78.233f, c = 43758.5453f;
+            float dt = dot_product(uv, Core::Vector2f{a, b}), sn = std::fmod(dt, static_cast<float>(PI));
+            return fract(sin(sn) * c);
+        }
+
+        std::vector<Core::Vector2f> poissonDiskSamples(int num_rings = 10, int num_samples = 50)
+        {
+            Core::Vector2f randomSeed{Random::get_random_float_01(), Random::get_random_float_01()};
+
+            float ANGLE_STEP = static_cast<float>(PI2 * num_rings / num_samples);
+            float INV_NUM_SAMPLES = static_cast<float>(1.f / num_samples);
+
+            float angle = rand_2to1(randomSeed) * static_cast<float>(PI2);  // random initial angle
+            float radius = INV_NUM_SAMPLES;
+            float radiusStep = radius;
+
+            std::vector<Core::Vector2f> ret;
+            for (int i = 0; i < num_samples; i++)
+            {
+                ret.push_back(Core::Vector2f{std::cos(angle), std::sin(angle)} * std::pow(radius, 0.75f));
+                radius += radiusStep;
+                angle += ANGLE_STEP;
+            }
+            return ret;
+        }
+
+        std::vector<Core::Vector2f> uniformDiskSamples(int num_samples = 20)
+        {
+            Core::Vector2f randomSeed{Random::get_random_float_01(), Random::get_random_float_01()};
+
+            float randNum = rand_2to1(randomSeed);
+            float sampleX = rand_1to1(randNum);
+            float sampleY = rand_1to1(sampleX);
+
+            float angle = sampleX * static_cast<float>(PI2);
+            float radius = std::sqrt(sampleY);
+
+            std::vector<Core::Vector2f> ret;
+            for (int i = 0; i < num_samples; i++)
+            {
+                ret.push_back(Core::Vector2f{std::cos(angle), std::sin(angle)} * std::pow(radius, 0.75f));
+
+                sampleX = rand_1to1(sampleY);
+                sampleY = rand_1to1(sampleX);
+
+                angle = sampleX * static_cast<float>(PI2);
+                radius = std::sqrt(sampleY);
+            }
+            return ret;
+        }
     }
 
 }

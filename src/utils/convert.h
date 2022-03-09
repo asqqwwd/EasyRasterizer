@@ -23,6 +23,33 @@ namespace Utils
         return Core::Image<Core::Vector4c>(data_p, w, h);
     }
 
+    Utils::TGAImage convert_CoreImage_to_TGAImage(const Core::Image<float> &img)
+    {
+        int w = img.get_width();
+        int h = img.get_height();
+        Utils::TGAImage ret(w, h, 1);
+        float max_dp = 0.f;
+        for (int y = 0; y < h; ++y)
+        {
+            for (int x = 0; x < w; ++x)
+            {
+                if (img.get(x, y) > max_dp)
+                {
+                    max_dp = img.get(x, y);
+                }
+            }
+        }
+        for (int y = 0; y < h; ++y)
+        {
+            for (int x = 0; x < w; ++x)
+            {
+                uint8_t value = static_cast<uint8_t>(img.get(x, y) / max_dp * 255);
+                ret.set(x, y, Utils::TGAColor(value, value, value));
+            }
+        }
+        return ret;
+    }
+
     void convert_CoreImage_to_raw_data(const Core::Image<Core::Vector3c> &img, uint8_t *out_data_p)
     {
         int w = img.get_width();

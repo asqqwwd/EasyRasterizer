@@ -46,7 +46,7 @@ namespace Utils
             TGAColor res = *this;
             double clamped = std::max(0., std::min(intensity, 1.));
             for (int i = 0; i < 4; i++)
-                res.bgra[i] = bgra[i] * clamped;
+                res.bgra[i] = static_cast<uint8_t>(bgra[i] * clamped);
             return res;
         }
     };

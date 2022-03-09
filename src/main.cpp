@@ -32,6 +32,10 @@ void display(void)
         sys->update();
     }
 
+    Core::Image<float> dp_img = Core::get_entity("MainLight")->get_component<Core::CameraComponent>()->get_depth_buffer();
+    Utils::TGAImage dp_img1 = Utils::convert_CoreImage_to_TGAImage(dp_img);
+    dp_img1.write_tga_file("./dp.tga");
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDrawPixels(Settings::WIDTH, Settings::HEIGHT, GL_BGR_EXT, GL_UNSIGNED_BYTE, Core::get_entity("MainCamera")->get_component<Core::CameraComponent>()->get_color_buffer());
     glutSwapBuffers(); // swap double buffer
