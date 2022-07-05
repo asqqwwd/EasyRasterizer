@@ -161,13 +161,13 @@ namespace Core
         {
             Scene *scene = new Scene("Default");
 
-            scene
-                ->add_entity(new Entity("TestObj"))                                                                     //
-                ->add_component(new MeshComponent())                                                                    //
-                ->load_vertexes("../../obj/cube.obj")                                                                   //
-                ->set_albedo_texture(Utils::convert_TGAImage_to_CoreImage(Utils::TGAImage("../../obj/colormap24.tga"))) //
-                ->set_scala(Vector3f{1, 1, 1})                                                                          //
-                ->set_position(Vector3f{0, 0.5f, 0});
+            // scene
+            //     ->add_entity(new Entity("TestObj"))                                                                     //
+            //     ->add_component(new MeshComponent())                                                                    //
+            //     ->load_vertexes("../../obj/cube.obj")                                                                   //
+            //     ->set_albedo_texture(Utils::convert_TGAImage_to_CoreImage(Utils::TGAImage("../../obj/colormap24.tga"))) //
+            //     ->set_scala(Vector3f{1, 1, 1})                                                                          //
+            //     ->set_position(Vector3f{0, 0.5f, 0});
 
             // scene
             //     ->add_entity(new Entity("HelmetObj"))                                                                              //

@@ -4,6 +4,8 @@ cmake_minimum_required(VERSION 3.10)
 project(MainSolution)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_BUILD_TYPE "Release")
+# SET(CMAKE_BUILD_TYPE "Debug")
 
 IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
     include_directories("${CMAKE_SOURCE_DIR}/3rdparty/include")

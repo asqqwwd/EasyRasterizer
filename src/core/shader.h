@@ -50,7 +50,7 @@ namespace Core
         Vector3f WS_NORMAL;   // world space normal
         Vector3f UV;
 
-        VertexOutput &operator+=(const VertexOutput &vert)
+        VertexOutput& operator+=(const VertexOutput& vert)
         {
             CS_POSITION += vert.CS_POSITION;
             WS_POSITION += vert.WS_POSITION;
@@ -58,12 +58,12 @@ namespace Core
             UV += vert.UV;
             return *this;
         }
-        VertexOutput operator+(const VertexOutput &vert) const
+        VertexOutput operator+(const VertexOutput& vert) const
         {
             return VertexOutput(*this) += vert;
         }
 
-        VertexOutput &operator*=(float value)
+        VertexOutput& operator*=(float value)
         {
             CS_POSITION *= value;
             WS_POSITION *= value;
@@ -75,7 +75,7 @@ namespace Core
         {
             return VertexOutput(*this) *= value;
         }
-        friend VertexOutput operator*(float value, const VertexOutput &vert)
+        friend VertexOutput operator*(float value, const VertexOutput& vert)
         {
             return VertexOutput(vert) *= value;
         }
@@ -115,7 +115,7 @@ namespace Core
 
     namespace PhongShader
     {
-        VertexOutput vert(const VertexInput &vi, const CameraAttribute &ca,const MeshAttribute &ma)
+        VertexOutput vert(const VertexInput& vi, const CameraAttribute& ca, const MeshAttribute& ma)
         {
             VertexOutput vo;
             vo.WS_POSITION = ma.M.mul(vi.MS_POSITION);
@@ -127,17 +127,17 @@ namespace Core
             return vo;
         }
 
-        Vector4c frag(FragmentInput fi, const LightAttribute &la, const CameraAttribute &ca, const MeshAttribute &ma)
+        Vector4c frag(FragmentInput fi, const LightAttribute& la, const CameraAttribute& ca, const MeshAttribute& ma, float cover_rate)
         {
             Vector3f world_half_dir = (ca.camera_postion - fi.IWS_POSITION.reshape<3>() - la.world_light_dir).normal(); // light/world dir must reverse to keep the half vector on the same side with the normal vector
-            Vector3f diffuse = la.light_color * Utils::tone_mapping(ma.albedo.sampling(fi.I_UV[0], 1 - fi.I_UV[1])).reshape<3>() * la.light_intensity * std::max(0.f, Utils::dot_product(fi.IWS_NORMAL, -1 * la.world_light_dir));
+            Vector3f diffuse = la.light_color * Utils::tone_mapping(cover_rate * ma.albedo.sampling(fi.I_UV[0], 1 - fi.I_UV[1])).reshape<3>() * la.light_intensity * std::max(0.f, Utils::dot_product(fi.IWS_NORMAL, -1 * la.world_light_dir));
             Vector3f specular = la.light_color * la.specular_color * la.light_intensity * std::pow(std::max(0.f, Utils::dot_product(fi.IWS_NORMAL, world_half_dir)), ma.gloss);
             Vector3f tmp = diffuse + la.ambient + specular;
             // Vector3f tmp = diffuse; // Test
-            return Vector4c{static_cast<uint8_t>(Utils::saturate(tmp[0]) * 255),
+            return Vector4c{ static_cast<uint8_t>(Utils::saturate(tmp[0]) * 255),
                             static_cast<uint8_t>(Utils::saturate(tmp[1]) * 255),
                             static_cast<uint8_t>(Utils::saturate(tmp[2]) * 255),
-                            0};
+                            0 };
             // return Vector4i{static_cast<int>(Utils::saturate(0) * 255),
             //                 static_cast<int>(Utils::saturate(0) * 255),
             //                 static_cast<int>(Utils::saturate(0) * 255),
